@@ -1,0 +1,38 @@
+# Extraction schema (output contract) for the KYC document pack, provided for this session.
+# Each field: required, pii (is it personal data?), review_threshold (route to human
+# review below this confidence).
+
+default_review_threshold: 0.85
+
+document_types:
+  certificate_of_incorporation:
+    fields:
+      company_name:          {required: true,  pii: false, review_threshold: 0.85}
+      registration_number:   {required: true,  pii: false, review_threshold: 0.90}
+      date_of_incorporation: {required: true,  pii: false, review_threshold: 0.85}
+      jurisdiction:          {required: true,  pii: false, review_threshold: 0.90}
+      registered_address:    {required: true,  pii: false, review_threshold: 0.85}
+
+  ubo_declaration:
+    fields:
+      company_name:          {required: true,  pii: false, review_threshold: 0.85}
+    owner_fields:
+      name:                  {required: true,  pii: true,  review_threshold: 0.90}
+      date_of_birth:         {required: true,  pii: true,  review_threshold: 0.90}
+      nationality:           {required: true,  pii: false, review_threshold: 0.90}
+      ownership_pct:         {required: true,  pii: false, review_threshold: 0.95}
+
+  identity_document:
+    fields:
+      surname:               {required: true,  pii: true,  review_threshold: 0.90}
+      given_names:           {required: true,  pii: true,  review_threshold: 0.90}
+      document_number:       {required: true,  pii: true,  review_threshold: 0.95}
+      date_of_birth:         {required: true,  pii: true,  review_threshold: 0.90}
+      nationality:           {required: true,  pii: false, review_threshold: 0.90}
+      expiry_date:           {required: true,  pii: false, review_threshold: 0.90}
+
+  proof_of_address:
+    fields:
+      name:                  {required: true,  pii: false, review_threshold: 0.85}
+      address:               {required: true,  pii: false, review_threshold: 0.85}
+      issue_date:            {required: true,  pii: false, review_threshold: 0.85}

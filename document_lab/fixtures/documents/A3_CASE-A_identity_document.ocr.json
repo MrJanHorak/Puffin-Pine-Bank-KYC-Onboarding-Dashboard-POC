@@ -1,0 +1,30 @@
+{
+  "simulated": true,
+  "note": "Simulated OCR output for offline use. Not produced by Azure.",
+  "fields": {
+    "surname": {
+      "value": "TOLVIK",
+      "confidence": 0.94
+    },
+    "given_names": {
+      "value": "MAREN",
+      "confidence": 0.92
+    },
+    "document_number": {
+      "value": "XB7734021",
+      "confidence": 0.97
+    },
+    "date_of_birth": {
+      "value": "1981-07-02",
+      "confidence": 0.92
+    },
+    "nationality": {
+      "value": "XB",
+      "confidence": 0.96
+    },
+    "expiry_date": {
+      "value": "2031-05-30",
+      "confidence": 0.94
+    }
+  }
+}

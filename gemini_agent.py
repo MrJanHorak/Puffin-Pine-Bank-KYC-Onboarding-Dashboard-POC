@@ -2,6 +2,7 @@
 import json, os, re
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+from output_checks import check_summary
 
 TOOLS = [{'functionDeclarations':[
     {'name':'get_kyc_assessment','description':'Read the course rules, screening outcomes and review routing for the selected synthetic case.', 'parameters':{'type':'OBJECT','properties':{}}},
@@ -36,6 +37,10 @@ def run_agent(assessment):
             if not calls:
                 text = '\n'.join(p.get('text','') for p in parts if p.get('text')).strip()
                 if not text or not {'get_kyc_assessment','get_policy_evidence'}.issubset(trace): raise ValueError('Incomplete agent trajectory')
+                reason = check_summary(text, assessment['policy'])
+                if reason: return {'mode':'held','text':reason,'trace':trace}
+                if assessment['policy']['outcome'] == 'not_configured':
+                    text = 'Policy was not checked. ' + text
                 return {'mode':'gemini','model':model,'text':text[:4000], 'trace':trace}
             if len(calls) > 2: raise ValueError('Too many tool calls')
             # Preserve all Gemini parts, including thought signatures, unmodified.
@@ -44,7 +49,11 @@ def run_agent(assessment):
             for call in calls:
                 name, args = call.get('name'), call.get('args',{})
                 if name not in ('get_kyc_assessment','get_policy_evidence') or args != {} or len(trace) >= 6: raise ValueError('Invalid tool call')
-                evidence = assessment['policy'] if name == 'get_policy_evidence' else {k:v for k,v in assessment.items() if k != 'policy'}
+                if name == 'get_policy_evidence':
+                    evidence = assessment['policy']
+                else:
+                    evidence = {k:v for k,v in assessment.items() if k not in ('policy','review_cases','trace')}
+                    evidence['review_cases'] = [{k:v for k,v in row.items() if k != 'actions'} for row in assessment['review_cases']]
                 result_part = {'name':name, 'response':{'result':evidence}}
                 if call.get('id'): result_part['id'] = call['id']
                 replies.append({'functionResponse':result_part}); trace.append(name)

@@ -2,7 +2,7 @@
 
 An analyst-facing **synthetic training prototype** with two distinct experiences:
 
-1. **Course KYC workbench:** uses the copied lab KYC data layer, screening, deterministic rules, review-case tool and Day 4 Azure AI Search client. It can run a bounded, read-only Gemini tool workflow on the resulting course case.
+1. **KYC case review:** uses the copied lab KYC data layer, screening, deterministic rules, review-case tool and Day 4 Azure AI Search client. It can run a bounded, read-only Gemini tool workflow on the resulting course case.
 2. **Application queue:** the original three simplified dashboard cases with predetermined outcomes. Their Gemini button is a simple summary, not the course agent. These PP cases are not mapped to the lab fixtures.
 
 The bank and all fixtures are fictional. Never use real customer data. This is a local teaching POC, without production authentication or bank integrations.
@@ -24,28 +24,34 @@ Start with `python app.py` and open http://127.0.0.1:8080. If the port is busy, 
 
 ## Course walkthrough
 
-In **Course KYC workbench**, enter a synthetic course application ID and run course checks:
+In **KYC case review**, enter a synthetic course application ID and select **Run checks**:
 
 - SPECIMEN-APP-5154: no flags in the included fixture.
 - SPECIMEN-APP-5155: compliance review with PEP and jurisdiction reasons.
 - SPECIMEN-APP-5192: missing proof of address; a pending status.
 
-The server loads the case from the included course files, runs the course's circuit-breaker screening function across the applicant and every director and beneficial owner, evaluates the course rules, and uses the course tool to create idempotent draft review cases for compliance reasons. The interface shows statuses, reason codes, screened party IDs and review-case IDs. It never approves or rejects an application.
+The server loads the case from the included course files, runs the course's circuit-breaker screening function across the applicant and every director and beneficial owner, evaluates the course rules, and uses the course tool to create idempotent draft review cases for compliance reasons. Each potentially matched party gets a separate review record and candidate evidence. A reviewer can acknowledge, escalate or record a synthetic rationale and return a review to the analyst. These actions do not clear a match or decide the application.
 
 When configured, the existing Day 4 client performs a read-only query and the UI displays the returned section IDs, versions and titles. Search failure or zero applicable sections holds policy-dependent output. A configured Gemini key enables **Run Gemini tool workflow**: Gemini must request both the course assessment and policy status through two read-only tools before an advisory response is shown. The server bounds calls and validates names and arguments. Gemini cannot approve, reject, change a case, or skip deterministic screening and review routing. Missing required data or unavailable screening holds the AI summary, even when compliance-review status takes precedence. If search is enabled but fails, the AI summary is held. If search is off, a summary can still be requested but must disclose that policy was not checked; the policy-dependent recommendation remains held.
 
-When policy retrieval succeeds, synthetic policy text and limited synthetic case facts are sent to Gemini. Returned text and citations are unverified: an analyst must inspect them. The model tool trace is shown, and no model output is used to determine status. The search client uses the lab's fixed query, synthetic jurisdiction and effective-date filter; results still need a relevance check.
+When policy retrieval succeeds, synthetic policy text and limited synthetic case facts are sent to Gemini. Returned sections can be expanded. The model output is held if it uses certain decision phrases or cites a policy ID not in the returned sections; these checks are conservative and incomplete. The model tool trace is shown, and no model output determines status. The search client uses the lab's fixed query, synthetic jurisdiction and effective-date filter; the analyst must still check relevance and citations. Recommendations remain held even when retrieval succeeds.
+
+## Ask about evidence
+
+In the KYC case review, use **Ask about retrieved policy** to ask a question about the returned policy text. **Document evidence assistant** is a separate practice pack: choose CASE-A, CASE-B or CASE-C and load the fields extracted by the Day 12 offline extractor. PDF fields come from the text layer; scanned documents use the provided simulated OCR sidecars. This pack is **not linked** to the SPECIMEN-APP case records. Click a field's source link to inspect the synthetic PDF or image. Then ask a question about the extracted fields.
+
+Both question features send the question and selected synthetic evidence to Gemini. The service checks that each returned source ID exists and its quoted text occurs in that source; this does not verify the answer's reasoning, relevance or truth. Low-confidence fields are flagged for human review. Answers are held if the model cannot provide valid citations or returns certain decision language. Never submit real documents, secrets or customer information.
 
 ## Provenance and limitations
 
-lab/starter-code/kyc and lab/starter-code/config are copied from concept-week-2/live-prototype; lab/fixtures/data contains the required synthetic KYC CSVs. lab_bridge.py adapts the original data layer, routing.screen_every_party, rules, tools.open_review_case, and policy_search.search_policy. gemini_agent.py adds the bounded Gemini function-calling loop. The full original routing.run_case replay/Claude workflow and all original gates and evals are **not** invoked by this adapter; this is not a claim that the original course floor is fully satisfied. The document extraction pipeline remains separate.
+lab/starter-code/kyc and lab/starter-code/config are copied from concept-week-2/live-prototype; lab/fixtures/data contains the required synthetic KYC CSVs. lab_bridge.py adapts the original data layer, routing.screen_every_party, rules, tools.open_review_case, and policy_search.search_policy. The review tool's idempotency key was extended to include party ID. gemini_agent.py adds the bounded Gemini function-calling loop. document_lab includes the Day 12 offline extraction components, schema, and synthetic documents, but does not run the full Day 12 case-management pipeline. The full original routing.run_case replay/Claude workflow and all original gates and evals are **not** invoked by this adapter; this is not a claim that the original course floor is fully satisfied.
 
-The course Azure Search integration and Gemini workflow have not been verified live in Skillable. A previous local search attempt in the separate prototype returned HTTP 403. Current tests mock Gemini and search; verify connectivity, policy relevance, generated citations, and failure scenarios in the lab before demonstrating live use. Real watchlists, OCR, customer messaging, core banking, and actual onboarding decisions are not implemented.
+The prior version's Azure Search and Gemini tool workflow were observed working for one synthetic case in Skillable. The new Q&A, reviewer actions and safety checks have only been tested locally with mocked Gemini; verify them in Skillable. Real watchlists, live OCR, customer messaging, core banking, and actual onboarding decisions are not implemented.
 
-The application queue retains its own local SQLite state. Its activity entries are per case; the sidebar Activity and Reports entries and the filter are placeholders. To reset the demonstration, stop the server and delete demo.sqlite3 and the state folder; this removes local demo history and review cases.
+The application queue retains its own local SQLite state. Activity includes sample-case actions and course review actions; Reports shows only local sample counts and review-record counts, not bank performance. The All applications filter remains a placeholder. To reset the demonstration, stop the server and delete demo.sqlite3 and the state folder; this removes local demo history and review cases.
 
 ## Tests
 
-After installing requirements, run `python -m unittest -v`. Tests cover case routing, pending states, policy failure, Gemini tool-loop boundaries and the simplified dashboard. The course code is a teaching implementation, not production-ready security or compliance controls.
+After installing requirements, run `python -m unittest -v` and `python evals/run_course_evals.py`. The latter adapts applicable Day 7 reference cases to the deterministic KYC adapter and explicitly skips replay-specific checks; it does not evaluate Gemini or live search. Tests cover case routing, multiple matches, review actions, pending states, citation validation, policy failure and the simplified dashboard. Neither tests nor the heuristic output filter prove that model text is safe or supported. The course code is a teaching implementation, not production-ready security or compliance controls.
 
 See [the internal brand guide](branding/BRAND-GUIDE.md) for the fictional identity and logo assets.

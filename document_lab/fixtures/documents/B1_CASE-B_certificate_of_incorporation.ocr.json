@@ -1,0 +1,26 @@
+{
+  "simulated": true,
+  "note": "Simulated OCR output for offline use. Not produced by Azure.",
+  "fields": {
+    "company_name": {
+      "value": "Marrow & Finch Trading Ltd",
+      "confidence": 0.84
+    },
+    "registration_number": {
+      "value": "MF-109284",
+      "confidence": 0.81
+    },
+    "date_of_incorporation": {
+      "value": "2022-01-09",
+      "confidence": 0.81
+    },
+    "jurisdiction": {
+      "value": "XA",
+      "confidence": 0.84
+    },
+    "registered_address": {
+      "value": "3 Tannery Lane, Westholm, XA 7713",
+      "confidence": 0.87
+    }
+  }
+}

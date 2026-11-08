@@ -7,7 +7,8 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 from dotenv import load_dotenv
-import lab_bridge, gemini_agent
+import lab_bridge, gemini_agent, document_bridge, evidence_qa
+from output_checks import check_summary
 
 ROOT = Path(__file__).resolve().parent
 load_dotenv(ROOT / '.env', override=False)
@@ -70,6 +71,8 @@ def assistant(case):
         parts = result['candidates'][0]['content']['parts']
         text = '\n'.join(p.get('text','') for p in parts if p.get('text')).strip()
         if not text: raise ValueError('empty response')
+        reason = check_summary(text)
+        if reason: return {'mode':'held','text':reason}
         return {'mode':'gemini', 'model':model, 'text':text[:4000]}
     except HTTPError as exc:
         message = {400:'The model request was rejected.', 401:'The API key was not accepted.', 403:'Access to Gemini was denied.', 404:'The model is unavailable for this project.', 429:'The Gemini quota or rate limit was reached.'}.get(exc.code, 'Gemini returned an error.')
@@ -118,6 +121,15 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(code); self.send_header('Content-Type', kind); self.send_header('Content-Length', str(len(data))); self.send_header('Cache-Control','no-store'); self.send_header('X-Content-Type-Options','nosniff'); self.end_headers(); self.wfile.write(data)
     def do_GET(self):
         path = urlparse(self.path).path
+        if path.startswith('/api/documents/'):
+            case_id = path.rsplit('/',1)[-1]
+            try: return self.respond(200, document_bridge.extract_case(case_id))
+            except ValueError as exc: return self.respond(400, {'error':str(exc)})
+        if path.startswith('/document-source/'):
+            name = path.rsplit('/',1)[-1]
+            doc = next((p for p in document_bridge.list_documents() if p.name == name), None)
+            if doc: return self.respond(200, doc.read_bytes(), 'application/pdf' if doc.suffix.lower()=='.pdf' else 'image/png')
+            return self.respond(404, {'error':'Document not found'})
         if path in ('/branding/mark.svg', '/branding/logo-light.svg', '/branding/logo-dark.svg', '/branding/puffin-pine-concept.png'):
             kind = 'image/png' if path.endswith('.png') else 'image/svg+xml; charset=utf-8'
             return self.respond(200, (ROOT / path.lstrip('/')).read_bytes(), kind)
@@ -125,17 +137,41 @@ class Handler(BaseHTTPRequestHandler):
             file = ROOT / ('index.html' if path == '/' else path[1:]); kind = {'.html':'text/html', '.js':'text/javascript', '.css':'text/css'}[file.suffix]
             return self.respond(200, file.read_bytes(), kind + '; charset=utf-8')
         with connect() as db:
+            if path == '/api/operations':
+                events = [dict(r) for r in db.execute('SELECT case_id,time,message FROM events ORDER BY id DESC LIMIT 100')]
+                cases = [detail(db,r['id']) for r in db.execute('SELECT id FROM cases')]
+                reviews = lab_bridge.list_review_cases()
+                for row in reviews:
+                    for item in row.get('actions',[]):
+                        events.append({'case_id':row['application_id'], 'time':item['time'], 'message':'Review '+row['review_case_id']+' '+item['action']+' by '+item['actor']})
+                events.sort(key=lambda item:item['time'],reverse=True)
+                return self.respond(200, {'events':events[:100], 'sample_counts':{s:sum(c['status']==s for c in cases) for s in ('Screening pending','Needs information','Compliance review','Ready for analyst')}, 'review_case_count':len(reviews), 'scope':'Three sample queue applications and local course review records only.'})
             if path == '/api/cases': return self.respond(200, [detail(db, r['id']) for r in db.execute('SELECT id FROM cases ORDER BY id')])
             if path.startswith('/api/cases/'):
                 case = detail(db, path.rsplit('/',1)[-1]); return self.respond(200 if case else 404, case or {'error':'Case not found'})
         self.respond(404, {'error':'Not found'})
     def do_POST(self):
         parts = urlparse(self.path).path.strip('/').split('/')
-        if parts == ['api','lab','run'] or parts == ['api','lab','agent']:
+        if parts in (['api','questions','document'], ['api','questions','policy']):
             try:
                 length = int(self.headers.get('Content-Length','0'))
                 if length > 4096: raise ValueError('Request too large')
                 payload = json.loads(self.rfile.read(length) or b'{}')
+                if parts[-1] == 'document':
+                    data = document_bridge.extract_case(payload.get('case_id',''))
+                    sources = [{'id':x['id'],'text':x['value'],'description':x['document']+'; '+x['source']+'; confidence '+str(x['confidence']),'review_required':x['review_required']} for x in data['evidence']]
+                else:
+                    policy = lab_bridge.policy_for_case(payload.get('application_id',''))
+                    sources = [{'id':x['section_id'],'text':x['content'],'description':x['title']+' v'+x['version']} for x in policy['sections']]
+                return self.respond(200, evidence_qa.answer_question(payload.get('question',''), sources))
+            except (ValueError, json.JSONDecodeError) as exc: return self.respond(400, {'error':str(exc)})
+        if parts in (['api','lab','run'], ['api','lab','agent'], ['api','lab','review']):
+            try:
+                length = int(self.headers.get('Content-Length','0'))
+                if length > 4096: raise ValueError('Request too large')
+                payload = json.loads(self.rfile.read(length) or b'{}')
+                if parts[-1] == 'review':
+                    return self.respond(200, lab_bridge.record_review(payload.get('application_id',''), payload.get('review_id',''), payload.get('action',''), payload.get('rationale','')))
                 assessment = lab_bridge.run_course_case(payload.get('application_id',''))
                 return self.respond(200, gemini_agent.run_agent(assessment) if parts[-1] == 'agent' else assessment)
             except (ValueError, json.JSONDecodeError) as exc: return self.respond(400, {'error':str(exc)})

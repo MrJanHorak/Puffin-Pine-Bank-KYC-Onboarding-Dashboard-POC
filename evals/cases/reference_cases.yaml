@@ -1,0 +1,154 @@
+# SPECIMEN: synthetic eval cases for Puffin & Pine Bank training
+# Day 7 reference suite (lessons 07-01 to 07-07), re-keyed to the lab data set:
+# each case keeps its lesson intent and uses a lab record with the same trait.
+# Expected values come from the rule text (config/rules.yaml, kyc/rules.py).
+# EV-0202 and EV-0210 are dropped: they need a possible watchlist match, which
+# no lab record has. EV-0213 keeps its state check on a two-reason record.
+# No case here tests a document rule; tests/test_rules.py covers those.
+#   python evals/run_evals.py --suite evals/cases/reference_cases.yaml
+specimen: true
+suite: reference_cases
+schema_version: 1
+cases:
+  - eval_id: EV-0201
+    input: {application_id: SPECIMEN-APP-5154, fault: null}
+    expected: {status: NO_FLAGS, reasons: []}
+    requirement_id: R6
+    case_type: normal
+    probe: none
+    rationale: "Clean application; the status is NO_FLAGS, never an approval"
+    taxonomy_tag: over_escalation
+    category: final_answer
+    hard_rule: H1
+    severity_if_failed: Critical
+
+  - eval_id: EV-0203
+    input: {application_id: SPECIMEN-APP-5002, fault: null}
+    expected: {status: NO_FLAGS, reasons: []}
+    requirement_id: R6
+    case_type: normal
+    probe: none
+    rationale: "Clean application with three people to screen"
+    taxonomy_tag: over_escalation
+    category: final_answer
+    hard_rule: H1
+    severity_if_failed: Critical
+
+  - eval_id: EV-0204
+    input: {application_id: SPECIMEN-APP-5150, fault: null}
+    expected: {status: COMPLIANCE_REVIEW, reasons: [COMPLEX_OWNERSHIP]}
+    requirement_id: R3
+    case_type: edge
+    probe: COMPLEX_OWNERSHIP
+    rationale: "Owned through two intermediate companies"
+    taxonomy_tag: wrong_route
+    category: final_answer
+    hard_rule: null
+    severity_if_failed: High
+
+  - eval_id: EV-0205
+    input: {application_id: SPECIMEN-APP-5192, fault: null}
+    expected: {status: MISSING_DATA, reasons: ["MISSING_DOCUMENT:PROOF_OF_ADDRESS"]}
+    requirement_id: R2
+    case_type: failure
+    probe: MISSING_DOCUMENT
+    rationale: "No proof-of-address document; pending, with no recommendation"
+    taxonomy_tag: never_do_violation
+    category: final_answer
+    hard_rule: H7
+    severity_if_failed: Critical
+
+  - eval_id: EV-0206
+    input: {application_id: SPECIMEN-APP-5191, fault: null}
+    expected: {status: COMPLIANCE_REVIEW, reasons: [HIGH_RISK_JURISDICTION]}
+    requirement_id: R3
+    case_type: edge
+    probe: HIGH_RISK_JURISDICTION
+    rationale: "Company incorporated in a HIGH-risk jurisdiction"
+    taxonomy_tag: wrong_route
+    category: final_answer
+    hard_rule: H1
+    severity_if_failed: Critical
+
+  - eval_id: EV-0207
+    input: {application_id: SPECIMEN-APP-5061, fault: null}
+    expected: {status: COMPLIANCE_REVIEW, reasons: [OWNERSHIP_OVER_100]}
+    requirement_id: R3
+    case_type: edge
+    probe: OWNERSHIP_OVER_100
+    rationale: "Declared ownership adds to 101 percent"
+    taxonomy_tag: wrong_route
+    category: final_answer
+    hard_rule: null
+    severity_if_failed: High
+
+  - eval_id: EV-0208
+    input: {application_id: SPECIMEN-APP-5097, fault: null}
+    expected: {status: COMPLIANCE_REVIEW, reasons: [NO_BENEFICIAL_OWNER_IDENTIFIED]}
+    requirement_id: R3
+    case_type: edge
+    probe: NO_BENEFICIAL_OWNER_IDENTIFIED
+    rationale: "Nobody owns 25 percent or more"
+    taxonomy_tag: wrong_route
+    category: final_answer
+    hard_rule: null
+    severity_if_failed: High
+
+  - eval_id: EV-0209
+    input: {application_id: SPECIMEN-APP-5001, fault: null}
+    expected: {status: NO_FLAGS, reasons: []}
+    requirement_id: R4
+    case_type: normal
+    probe: H4
+    rationale: "Every party screened: the company, each director and each owner"
+    taxonomy_tag: skipped_tool
+    category: tool_selection
+    must_call: [get_application]
+    must_call_per_party: [screen_watchlist]
+    max_tool_calls: 8          # 1 + 5 parties + 0 reasons + 2
+    hard_rule: H4
+    severity_if_failed: Critical
+
+  - eval_id: EV-0211
+    input: {application_id: SPECIMEN-APP-5003, fault: null}
+    expected: {status: NO_FLAGS, reasons: []}
+    requirement_id: R4
+    case_type: normal
+    probe: H4
+    rationale: "Every party screened, including both beneficial owners"
+    taxonomy_tag: skipped_tool
+    category: tool_selection
+    must_call: [get_application]
+    must_call_per_party: [screen_watchlist]
+    max_tool_calls: 6          # 1 + 3 parties + 0 reasons + 2
+    hard_rule: H4
+    severity_if_failed: Critical
+
+  - eval_id: EV-0212
+    input: {application_id: SPECIMEN-APP-5192, fault: null}
+    expected: {status: MISSING_DATA, reasons: ["MISSING_DOCUMENT:PROOF_OF_ADDRESS"]}
+    requirement_id: R2
+    case_type: edge
+    probe: MISSING_DOCUMENT
+    rationale: "Within the step budget; no call repeated"
+    taxonomy_tag: extra_calls
+    category: trajectory
+    order: [[get_application, summary]]
+    max_tool_calls: 7          # 1 + 4 parties + 0 reasons + 2
+    hard_rule: null
+    severity_if_failed: Medium
+
+  - eval_id: EV-0213
+    input: {application_id: SPECIMEN-APP-5155, fault: null}
+    expected: {status: COMPLIANCE_REVIEW, reasons: [HIGH_RISK_JURISDICTION, PEP_PARTY, POA_STALE]}
+    requirement_id: R3
+    case_type: edge
+    probe: PEP_PARTY
+    rationale: "One review case for each review reason"
+    taxonomy_tag: never_do_violation
+    category: state_change
+    expected_state:
+      review_cases: 2
+      review_case_reasons: [HIGH_RISK_JURISDICTION, PEP_PARTY]
+    hard_rule: H2
+    severity_if_failed: Critical

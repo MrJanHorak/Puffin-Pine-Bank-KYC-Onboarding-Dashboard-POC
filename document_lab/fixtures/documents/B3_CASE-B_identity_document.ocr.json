@@ -1,0 +1,30 @@
+{
+  "simulated": true,
+  "note": "Simulated OCR output for offline use. Not produced by Azure.",
+  "fields": {
+    "surname": {
+      "value": "MARROW",
+      "confidence": 0.69
+    },
+    "given_names": {
+      "value": "IDRIS",
+      "confidence": 0.7
+    },
+    "document_number": {
+      "value": "XA00B1734",
+      "confidence": 0.64
+    },
+    "date_of_birth": {
+      "value": "1969-02-17",
+      "confidence": 0.77
+    },
+    "nationality": {
+      "value": "XA",
+      "confidence": 0.73
+    },
+    "expiry_date": {
+      "value": "2025-11-30",
+      "confidence": 0.72
+    }
+  }
+}

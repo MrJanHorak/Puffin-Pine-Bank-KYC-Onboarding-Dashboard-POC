@@ -1,0 +1,18 @@
+{
+  "simulated": true,
+  "note": "Simulated OCR output for offline use. Not produced by Azure.",
+  "fields": {
+    "name": {
+      "value": "Halden Logistics Ltd",
+      "confidence": 0.57
+    },
+    "address": {
+      "value": "l4 Quay Street, Port Ellery, XB 2O4l",
+      "confidence": 0.46
+    },
+    "issue_date": {
+      "value": "2O26-O8-Ol",
+      "confidence": 0.41
+    }
+  }
+}

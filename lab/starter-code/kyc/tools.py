@@ -100,16 +100,16 @@ def open_review_case(application_id: str, reason_code: str, party_id: str = "",
                      store: Path = DEFAULT_CASE_STORE) -> dict:
     """Open a DRAFT review case for a compliance reviewer (hard rules H2, H3).
 
-    A repeat request for the same application and reason returns the case
-    already open, so a retry never adds a second case.
+    A repeat request for the same application, reason and party returns the
+    existing case. Distinct matched parties get distinct review records.
     """
     started = time.perf_counter()
     store = Path(store)
     cases = json.loads(store.read_text(encoding="utf-8")) \
         if store.exists() else []
     for case in cases:
-        if (case["application_id"], case["reason_code"]) == \
-                (application_id, reason_code):
+        if (case["application_id"], case["reason_code"], case.get("party_id", "")) == \
+                (application_id, reason_code, party_id):
             log_call("open_review_case", started, "duplicate_suppressed",
                      application_id=application_id, reason_code=reason_code,
                      review_case_id=case["review_case_id"])
