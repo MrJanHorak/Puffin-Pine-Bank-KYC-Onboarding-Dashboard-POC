@@ -24,11 +24,12 @@ Start with `python app.py` and open http://127.0.0.1:8080. If the port is busy, 
 
 ## Course walkthrough
 
-In **KYC case review**, enter a synthetic course application ID and select **Run checks**:
+In **KYC case review**, choose or enter a synthetic application ID and select **Run checks**. The included applications.csv contains 200 original application records, numbered SPECIMEN-APP-5001 through SPECIMEN-APP-5200. One additional synthetic application, SPECIMEN-APP-5201, is assembled from the CASE-A document pack without changing the original course CSVs. For example:
 
 - SPECIMEN-APP-5154: no flags in the included fixture.
 - SPECIMEN-APP-5155: compliance review with PEP and jurisdiction reasons.
 - SPECIMEN-APP-5192: missing proof of address; a pending status.
+- SPECIMEN-APP-5201: linked to CASE-A documents; pending because proof-of-address extraction needs review and other required evidence is missing.
 
 The server loads the case from the included course files, runs the course's circuit-breaker screening function across the applicant and every director and beneficial owner, evaluates the course rules, and uses the course tool to create idempotent draft review cases for compliance reasons. Each potentially matched party gets a separate review record and candidate evidence. A reviewer can acknowledge, escalate or record a synthetic rationale and return a review to the analyst. These actions do not clear a match or decide the application.
 
@@ -38,7 +39,9 @@ When policy retrieval succeeds, synthetic policy text and limited synthetic case
 
 ## Ask about evidence
 
-In the KYC case review, use **Ask about retrieved policy** to ask a question about the returned policy text. **Document evidence assistant** is a separate practice pack: choose CASE-A, CASE-B or CASE-C and load the fields extracted by the Day 12 offline extractor. PDF fields come from the text layer; scanned documents use the provided simulated OCR sidecars. This pack is **not linked** to the SPECIMEN-APP case records. Click a field's source link to inspect the synthetic PDF or image. Then ask a question about the extracted fields.
+In the KYC case review, use **Ask about retrieved policy** to ask a question about the returned policy text. **Document evidence assistant** uses the synthetic practice pack: choose CASE-A, CASE-B or CASE-C and load the fields extracted by the Day 12 offline extractor. PDF fields come from the text layer; scanned documents use provided simulated OCR sidecars. CASE-A is explicitly linked to the new example SPECIMEN-APP-5201; CASE-B and CASE-C are not linked to KYC applications. Run 5201 and select **View linked documents**, or choose CASE-A in the document assistant. Click a field's source link to inspect the synthetic PDF or image. Then ask a question about the extracted fields.
+
+For 5201, the application date is a stated synthetic assumption. The ownership declaration names two owners, but the pack contains only one identity document and does not establish the director list or PEP declarations. Low-confidence address fields are not accepted as verified KYC data. The example therefore stays pending; it does not claim to have screened unknown directors or verified missing information. Document Q&A reads the linked evidence, but reviewer corrections do not yet update the application.
 
 Both question features send the question and selected synthetic evidence to Gemini. The service checks that each returned source ID exists and its quoted text occurs in that source; this does not verify the answer's reasoning, relevance or truth. Low-confidence fields are flagged for human review. Answers are held if the model cannot provide valid citations or returns certain decision language. Never submit real documents, secrets or customer information.
 
@@ -52,6 +55,6 @@ The application queue retains its own local SQLite state. Activity includes samp
 
 ## Tests
 
-After installing requirements, run `python -m unittest -v` and `python evals/run_course_evals.py`. The latter adapts applicable Day 7 reference cases to the deterministic KYC adapter and explicitly skips replay-specific checks; it does not evaluate Gemini or live search. Tests cover case routing, multiple matches, review actions, pending states, citation validation, policy failure and the simplified dashboard. Neither tests nor the heuristic output filter prove that model text is safe or supported. The course code is a teaching implementation, not production-ready security or compliance controls.
+After installing requirements, run `python -m unittest -v` and `python evals/run_course_evals.py`. If Node.js is available, `node tests/frontend-smoke.cjs` checks the async document-loading and form controls. The evaluation adapts applicable Day 7 reference cases to the deterministic KYC adapter and explicitly skips replay-specific checks; it does not evaluate Gemini or live search. Tests cover case routing, multiple matches, review actions, pending states, citation validation, policy failure and the simplified dashboard. Neither tests nor the heuristic output filter prove that model text is safe or supported. The course code is a teaching implementation, not production-ready security or compliance controls.
 
 See [the internal brand guide](branding/BRAND-GUIDE.md) for the fictional identity and logo assets.

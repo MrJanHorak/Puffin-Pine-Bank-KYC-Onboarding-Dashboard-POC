@@ -121,6 +121,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(code); self.send_header('Content-Type', kind); self.send_header('Content-Length', str(len(data))); self.send_header('Cache-Control','no-store'); self.send_header('X-Content-Type-Options','nosniff'); self.end_headers(); self.wfile.write(data)
     def do_GET(self):
         path = urlparse(self.path).path
+        if path == '/api/lab/applications':
+            return self.respond(200, {'application_ids':sorted(list(lab_bridge.data_layer.tables()['applications']) + [lab_bridge.linked_case.APPLICATION_ID])})
         if path.startswith('/api/documents/'):
             case_id = path.rsplit('/',1)[-1]
             try: return self.respond(200, document_bridge.extract_case(case_id))

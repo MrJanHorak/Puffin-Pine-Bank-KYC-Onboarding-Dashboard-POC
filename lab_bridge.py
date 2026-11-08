@@ -2,6 +2,7 @@
 import json, os, re, sys, threading
 from datetime import datetime, timezone
 from pathlib import Path
+import linked_case
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / 'lab' / 'starter-code'))
@@ -13,12 +14,17 @@ REVIEW_STORE = ROOT / 'state' / 'lab-review-cases.json'
 def run_course_case(application_id):
     if not isinstance(application_id, str) or not re.fullmatch(r'SPECIMEN-APP-\d{4}', application_id):
         raise ValueError('Use an application ID such as SPECIMEN-APP-5154.')
-    pack = data_layer.get_application_pack(application_id)
+    linked = application_id == linked_case.APPLICATION_ID
+    pack, extracted = linked_case.build_pack() if linked else (data_layer.get_application_pack(application_id), None)
     if pack is None: raise ValueError('Application not found.')
-    application = tools.get_application(application_id)
+    application = {'parties':[{'party_id':p['party_id']} for p in rules.parties_to_screen(pack)]} if linked else tools.get_application(application_id)
     trace = [{'kind':'tool','name':'get_application','ok':True,'party_ids':[p['party_id'] for p in application['parties']]}]
     screenings = routing.screen_every_party(pack, tools.FaultPlan(), trace)
     status, reasons = rules.check_application(pack, screenings)
+    if linked:
+        # The practice documents do not establish the full director list or PEP declarations.
+        reasons = sorted(set(reasons + ['MISSING_FIELD:director_list','MISSING_FIELD:declared_pep']))
+        status = rules.status_for(reasons)
     reviews = []
     with _review_lock:
         for reason in reasons:
@@ -43,6 +49,9 @@ def run_course_case(application_id):
             'review_cases':reviews, 'policy':policy,
             'recommendation_held':True,
             'trace':trace,
+            'linked_document_case': linked_case.DOCUMENT_CASE if linked else None,
+            'document_review_items': extracted['review_items'] if linked else [],
+            'case_notes': ['Synthetic application date: 2026-08-15.', 'Director list and PEP declarations have not been provided.', 'Fields below the extraction review threshold are not accepted as verified KYC data.'] if linked else [],
             'note':'Synthetic course rules and watchlist. A person reviews and decides.'}
 
 def retrieve_policy(jurisdiction):
@@ -62,7 +71,7 @@ def retrieve_policy(jurisdiction):
 
 def policy_for_case(application_id):
     if not isinstance(application_id, str) or not re.fullmatch(r'SPECIMEN-APP-\d{4}', application_id): raise ValueError('Use an application ID such as SPECIMEN-APP-5154.')
-    pack = data_layer.get_application_pack(application_id)
+    pack = linked_case.build_pack()[0] if application_id == linked_case.APPLICATION_ID else data_layer.get_application_pack(application_id)
     if pack is None: raise ValueError('Application not found.')
     return retrieve_policy(pack['company']['country_code'])
 

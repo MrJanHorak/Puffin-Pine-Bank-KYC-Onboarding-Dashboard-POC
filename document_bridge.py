@@ -27,4 +27,4 @@ def extract_case(case_id):
                                  'field':name, 'value':str(val['value']), 'confidence':val.get('confidence'),
                                  'source':record['source'], 'review_required':any(item['field']==name for item in items)})
     return {'case_id':case_id,'evidence':evidence,'review_items':reviews,
-            'notice':'Separate synthetic document practice pack; not linked to the SPECIMEN application records. PDF text and simulated OCR require review.'}
+            'notice':('This synthetic document pack is linked to example application SPECIMEN-APP-5201. ' if case_id == 'CASE-A' else 'This synthetic document pack is not linked to an application. ') + 'PDF text and simulated OCR require review.'}

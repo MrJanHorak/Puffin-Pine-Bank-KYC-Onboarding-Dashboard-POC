@@ -21,6 +21,13 @@ class HttpWorkflowTests(unittest.TestCase):
         request=Request(self.base+path,data=json.dumps(body).encode(),headers={'Content-Type':'application/json'},method='POST')
         with urlopen(request) as response: return json.load(response)
     def test_document_and_review_workflow(self):
+        ids=self.get('/api/lab/applications')['application_ids']
+        self.assertEqual(len(ids),201)
+        self.assertIn('SPECIMEN-APP-5200',ids)
+        self.assertIn('SPECIMEN-APP-5201',ids)
+        linked=self.post('/api/lab/run',{'application_id':'SPECIMEN-APP-5201'})
+        self.assertEqual(linked['linked_document_case'],'CASE-A')
+        self.assertEqual(linked['status'],'MISSING_DATA')
         documents=self.get('/api/documents/CASE-B'); self.assertTrue(documents['review_items'])
         result=self.post('/api/lab/run',{'application_id':'SPECIMEN-APP-5155'})
         self.assertEqual(result['status'],'COMPLIANCE_REVIEW')
