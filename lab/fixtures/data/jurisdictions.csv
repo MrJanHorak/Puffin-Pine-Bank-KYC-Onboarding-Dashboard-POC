@@ -1,0 +1,12 @@
+# SPECIMEN: synthetic training data for Puffin & Pine Bank. Every name, ID and number is invented.
+country_code,name,risk_tier
+XA,Aldmora,LOW
+XB,Brisolan,LOW
+XC,Corvessa,MEDIUM
+XD,Dunmaric,LOW
+XE,Estrelune,MEDIUM
+XF,Fallowmere,LOW
+XG,Galdovia,MEDIUM
+XH,Harthmoor,HIGH
+XI,Isveran,LOW
+XJ,Jorvale,HIGH

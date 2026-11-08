@@ -1,0 +1,34 @@
+# SPECIMEN: synthetic training data for Puffin & Pine Bank. Every name, ID and number is invented.
+# Monitoring thresholds: the machine-readable half of docs/thresholds.md.
+# A breach is a value strictly above its threshold:
+#   python tools/signals.py --log samples/pilot_week.jsonl --by day --thresholds
+# Baselines come from Day 9's reference week (40 runs) and its cost
+# projection. The compliance policy owner signs every threshold change;
+# owner_role is the role told when a value breaches.
+specimen: true
+thresholds:
+  - metric: calls_per_case
+    baseline: 3.0
+    threshold: 6.0
+    owner_role: ctd_lead
+    source: "2 x baseline (Day 9 rule), Day 9 reference week"
+  - metric: retry_rate
+    baseline: 0.0
+    threshold: 0.1
+    owner_role: ctd_lead
+    source: "baseline + 0.1 (Day 9 rule), Day 9 reference week"
+  - metric: p95_ms
+    baseline: 6700
+    threshold: 10050
+    owner_role: ctd_lead
+    source: "1.5 x baseline (Day 9 rule), Day 9 reference week"
+  - metric: cost_cumulative
+    baseline: 4.40
+    threshold: 6.60
+    owner_role: ctd_lead
+    source: "1.5 x baseline cost per day (Day 9 rule), baseline projection"
+  - metric: review_share
+    baseline: 0.15
+    threshold: 0.225
+    owner_role: compliance_policy_owner
+    source: "1.5 x baseline (Day 9 relative rule), Day 9 reference week"

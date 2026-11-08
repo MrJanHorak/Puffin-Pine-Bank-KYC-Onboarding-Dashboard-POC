@@ -1,0 +1,8 @@
+# SPECIMEN: synthetic training data for Puffin & Pine Bank. Every name, ID and number is invented.
+specimen: true
+scenario: rules_first
+log: samples/scenarios/rules_first.jsonl
+volume_multiplier: 1
+calls_multiplier: 1
+eval_baseline: RUN-20261110-101502
+eval_results: RUN-20261110-142210

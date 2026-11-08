@@ -1,0 +1,6 @@
+# SPECIMEN: synthetic training data for Puffin & Pine Bank. Every name, ID and number is invented.
+specimen: true
+scenario: volume_spike
+log: samples/scenarios/baseline.jsonl
+volume_multiplier: 3
+calls_multiplier: 1

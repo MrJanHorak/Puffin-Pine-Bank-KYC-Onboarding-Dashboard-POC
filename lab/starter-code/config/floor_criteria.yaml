@@ -1,0 +1,44 @@
+# SPECIMEN: synthetic training data for Puffin & Pine Bank. Every name, ID and number is invented.
+# The POC floor from Day 6, checked by tools/validate_floor.py. The script
+# reads the floor cases, their expected
+# status and reasons and the FLOOR-5 record from this file, so no ID is
+# written into the script.
+specimen: true
+criteria:
+  - criterion_id: FLOOR-1
+    text: "Case data comes from the data layer, not the prompt."
+  - criterion_id: FLOOR-2
+    text: "The agent completes the PRD task using only in-scope tools."
+  - criterion_id: FLOOR-3
+    text: >-
+      The page shows recommendation, reasons, sources and "Pending analyst
+      review", with no approve or reject control.
+  - criterion_id: FLOOR-4
+    text: >-
+      One command runs a case; the log has run_start, model_call and
+      run_end lines and no personal data.
+  - criterion_id: FLOOR-5
+    text: "SPECIMEN-APP-5192 returns MISSING_DATA without crashing."
+# The tools the build may call for the PRD task (FLOOR-2).
+in_scope_tools: [get_application, screen_watchlist, open_review_case]
+# The prompt FLOOR-1 checks: it must hold no case data (no SPECIMEN record).
+prompt_file: prompts/agent_instructions.md
+# Each floor case, run in this order, with the status and reasons the
+# reference PRD gives it (FLOOR-2).
+floor_cases:
+  - application_id: SPECIMEN-APP-5191
+    status: COMPLIANCE_REVIEW
+    reasons: [HIGH_RISK_JURISDICTION]
+  - application_id: SPECIMEN-APP-5154
+    status: NO_FLAGS
+    reasons: []
+  - application_id: SPECIMEN-APP-5192
+    status: MISSING_DATA
+    reasons: ["MISSING_DOCUMENT:PROOF_OF_ADDRESS"]
+# The missing-data record (FLOOR-5).
+floor5:
+  application_id: SPECIMEN-APP-5192
+  status: MISSING_DATA
+  reasons: ["MISSING_DOCUMENT:PROOF_OF_ADDRESS"]
+# The case whose page is saved for FLOOR-3.
+page_case: SPECIMEN-APP-5154

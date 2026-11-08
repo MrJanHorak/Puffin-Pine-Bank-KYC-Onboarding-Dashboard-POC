@@ -1,0 +1,25 @@
+# SPECIMEN: synthetic training data for Puffin & Pine Bank. Every name, ID and number is invented.
+# Placeholder price card. Lesson starters keep these placeholder
+# prices, so every lesson figure stays the same; real dated prices from the
+# provider's published page go only into lab cards. Prices are USD per million
+# tokens. Each name is the model ID as billed in the run logs.
+specimen: true
+as_of: "2026-10-03"
+source: "PLACEHOLDER: copy from the provider's price page"
+currency: USD
+models:
+  - name: model-large
+    tier: large
+    input_per_mtok: 8.00
+    output_per_mtok: 40.00
+    cache_read_per_mtok: 0.80
+  - name: model-mid
+    tier: mid
+    input_per_mtok: 2.00
+    output_per_mtok: 10.00
+    cache_read_per_mtok: 0.20
+  - name: model-small
+    tier: small
+    input_per_mtok: 0.40
+    output_per_mtok: 2.00
+    cache_read_per_mtok: 0.04

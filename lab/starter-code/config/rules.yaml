@@ -1,0 +1,46 @@
+# SPECIMEN: synthetic training data for Puffin & Pine Bank. Every name, ID and number is invented.
+# Puffin & Pine Bank's illustrative training rules for the KYC build, not regulatory requirements.
+# A change to any threshold here goes through the approval chain: the
+# compliance policy owner approves it, and the change bumps rules_version.
+specimen: true
+rules_version: "rules@1"
+owner_role: compliance_policy_owner
+poa_max_age_days: 90             # proof of address up to 90 days old passes
+possible_match_threshold: 0.85   # possible match at 0.85 or more
+beneficial_owner_threshold_pct: 25   # owning 25% or more, directly or through others
+max_retries: 2                   # retries per tool per run, then the pending status
+
+# Each reason code and the status it sets.
+reasons:
+  POA_STALE: FLAGGED
+  PASSPORT_EXPIRED: FLAGGED
+  NAME_MISMATCH: FLAGGED
+  INCORPORATED_AFTER_APPLICATION: FLAGGED
+  DUPLICATE_APPLICATION: FLAGGED
+  PEP_PARTY: COMPLIANCE_REVIEW
+  HIGH_RISK_JURISDICTION: COMPLIANCE_REVIEW
+  POSSIBLE_WATCHLIST_MATCH: COMPLIANCE_REVIEW
+  OWNERSHIP_OVER_100: COMPLIANCE_REVIEW
+  NO_BENEFICIAL_OWNER_IDENTIFIED: COMPLIANCE_REVIEW
+  COMPLEX_OWNERSHIP: COMPLIANCE_REVIEW
+  SCREENING_UNAVAILABLE: SCREENING_UNAVAILABLE
+
+# Reason codes written as <family>:<detail>, such as MISSING_FIELD:proof_of_address_date.
+reason_families:
+  MISSING_FIELD: MISSING_DATA       # a required field is blank
+  MISSING_DOCUMENT: MISSING_DATA    # a required document is absent
+  DATE_UNREADABLE: MISSING_DATA     # a date is not in YYYY-MM-DD form
+
+# The five statuses, most protective first. When several apply, the first one wins
+# and every reason is kept. Each means a person still decides (hard rule H1).
+statuses:
+  - code: COMPLIANCE_REVIEW
+    display: "Routed to compliance review."
+  - code: SCREENING_UNAVAILABLE
+    display: "Pending: screening unavailable. No approval until a screening result is recorded."
+  - code: MISSING_DATA
+    display: "Pending: missing data."
+  - code: FLAGGED
+    display: "Flagged for the analyst, with reasons."
+  - code: NO_FLAGS
+    display: "Complete, no flags. Analyst completes screening review, risk rating and decision."

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 128" role="img" aria-labelledby="title">
+  <title id="title">Puffin &amp; Pine Bank, light version</title>
+  <rect width="128" height="128" rx="32" fill="#eaf2e5"/>
+  <path d="M34 88c0-27 13-49 34-55 14-4 27 2 34 14l-17 8c-4-6-10-9-16-8-9 2-14 10-14 21 0 9 4 16 10 22H34Z" fill="#17483f"/>
+  <path d="M82 54l22 7-19 8-8-6Z" fill="#bb7d42"/><circle cx="75" cy="49" r="3" fill="#eaf2e5"/>
+  <path d="M78 63 61 85h9L57 100h42L86 85h9Z" fill="#6f9f79"/><path d="M78 96v8" stroke="#6f9f79" stroke-width="4" stroke-linecap="round"/>
+  <text x="154" y="61" fill="#f4f8f2" font-family="Georgia,serif" font-size="38" font-weight="bold" letter-spacing="-1">Puffin &amp; Pine</text>
+  <text x="157" y="91" fill="#b8d2c2" font-family="Arial,sans-serif" font-size="13" font-weight="bold" letter-spacing="3.4">BUSINESS BANKING</text>
+</svg>

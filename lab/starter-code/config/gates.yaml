@@ -1,0 +1,41 @@
+# SPECIMEN: synthetic training data for Puffin & Pine Bank. Every name, ID and number is invented.
+# Approval gates for the KYC build (Day 8), read by kyc/gate.py on every check.
+# A teaching example: the client's and McKinsey's governance standards replace
+# the roles named here. The compliance policy owner signs every change.
+specimen: true
+owner_role: compliance_policy_owner
+
+# Every action with its permission class: read, draft_for_human,
+# write_with_approval or never. An action missing here is denied (GATE-01).
+actions:
+  get_application: read
+  screen_watchlist: read
+  open_review_case: draft_for_human
+  publish_case_result: draft_for_human
+  close_review_case: write_with_approval
+  approve_application: never
+  reject_application: never
+  contact_customer: never
+  close_alert: never
+  file_report: never
+
+# Gates, checked in this order. governs_steps names the action a gate blocks,
+# or the step that must come first.
+gates:
+  - gate_id: GATE-01
+    reason_code: NEVER_ALLOWED
+    governs_steps: [approve_application, reject_application, contact_customer,
+                    close_alert, file_report]
+  - gate_id: GATE-02
+    reason_code: APPROVAL_REQUIRED
+    governs_steps: [close_review_case]
+    approver_roles: [compliance_reviewer, senior_approver]
+  - gate_id: GATE-03
+    reason_code: SCREENING_INCOMPLETE
+    governs_steps: [screen_watchlist]
+  - gate_id: GATE-04
+    reason_code: REVIEW_CASE_MISSING
+    governs_steps: [open_review_case]
+  - gate_id: GATE-07
+    reason_code: PENDING_NO_RECOMMENDATION
+    governs_steps: []
