@@ -1,0 +1,7 @@
+{
+  "summary": {
+    "text": "The customer disputes 12 transactions, reporting a cancelled subscription still charged. For the analyst to note: OUT_OF_TIME:T-3901, OUT_OF_TIME:T-3902, OUT_OF_TIME:T-3903, OUT_OF_TIME:T-3904, OUT_OF_TIME:T-3905, OUT_OF_TIME:T-3906, OUT_OF_TIME:T-3907, OUT_OF_TIME:T-3908. No decision has been made; an analyst reviews and decides.",
+    "tokens_in": 175,
+    "tokens_out": 83
+  }
+}

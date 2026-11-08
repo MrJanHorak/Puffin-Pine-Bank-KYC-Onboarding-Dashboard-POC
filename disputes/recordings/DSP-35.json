@@ -1,0 +1,7 @@
+{
+  "summary": {
+    "text": "The customer disputes 2 transactions, reporting goods not as described. Policy DP-4.2 applies to this kind of dispute. Waiting on: TXN_NOT_FOUND:T-3599, MISSING_EVIDENCE:item_description. A request to the customer is drafted for an analyst to review and send. No decision has been made; an analyst reviews and decides.",
+    "tokens_in": 190,
+    "tokens_out": 80
+  }
+}

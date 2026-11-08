@@ -6,3 +6,6 @@ demo.sqlite3
 !.env.example
 .venv/
 state/
+
+logs/
+disputes/evals/last_run.md

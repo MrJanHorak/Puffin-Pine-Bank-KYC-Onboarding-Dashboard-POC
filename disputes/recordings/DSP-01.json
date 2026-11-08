@@ -1,0 +1,7 @@
+{
+  "summary": {
+    "text": "The customer disputes 2 transactions, reporting a duplicate charge. Waiting on: TXN_NOT_FOUND:T-0199. A request to the customer is drafted for an analyst to review and send. No decision has been made; an analyst reviews and decides.",
+    "tokens_in": 128,
+    "tokens_out": 58
+  }
+}

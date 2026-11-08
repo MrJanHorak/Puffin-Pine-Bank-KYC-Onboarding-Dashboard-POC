@@ -1,0 +1,7 @@
+{
+  "summary": {
+    "text": "The customer disputes 3 transactions, reporting a duplicate charge. Routed to the fraud queue because three charges at different merchants within 24 hours; a fraud review case is open. No decision has been made; an analyst reviews and decides.",
+    "tokens_in": 124,
+    "tokens_out": 61
+  }
+}

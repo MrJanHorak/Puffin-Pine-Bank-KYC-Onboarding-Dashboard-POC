@@ -1,0 +1,7 @@
+{
+  "summary": {
+    "text": "The customer disputes 1 transaction, reporting a duplicate charge. The disputed total is over 1,000 USD, so a senior analyst owns the decision. No decision has been made; an analyst reviews and decides.",
+    "tokens_in": 124,
+    "tokens_out": 50
+  }
+}

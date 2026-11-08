@@ -1,0 +1,12 @@
+{
+  "summary": {
+    "text": "The customer disputes 1 transaction, reporting an unspecified problem. They chose Other; the suggested category is DUPLICATE_CHARGE, based on: \"My statement shows the same payment two times.\" Please confirm it. No decision has been made; an analyst reviews and decides.",
+    "tokens_in": 130,
+    "tokens_out": 67
+  },
+  "category": {
+    "text": "{\"category\": \"DUPLICATE_CHARGE\", \"quote\": \"My statement shows the same payment two times.\"}",
+    "tokens_in": 101,
+    "tokens_out": 23
+  }
+}

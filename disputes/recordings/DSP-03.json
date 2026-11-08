@@ -1,0 +1,7 @@
+{
+  "summary": {
+    "text": "The customer disputes 1 transaction, reporting a duplicate charge. For the analyst to note: AMOUNT_MISMATCH:T-0301. No decision has been made; an analyst reviews and decides.",
+    "tokens_in": 127,
+    "tokens_out": 44
+  }
+}

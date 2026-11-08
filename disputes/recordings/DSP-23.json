@@ -1,0 +1,7 @@
+{
+  "summary": {
+    "text": "The customer disputes 1 transaction, reporting a duplicate charge. For the analyst to note: DUPLICATE_DISPUTE:DSP-90. No decision has been made; an analyst reviews and decides.",
+    "tokens_in": 128,
+    "tokens_out": 44
+  }
+}

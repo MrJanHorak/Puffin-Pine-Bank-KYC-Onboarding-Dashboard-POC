@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 from dotenv import load_dotenv
-import lab_bridge, gemini_agent, document_bridge, evidence_qa, linked_review, application_directory, course_edits
+import lab_bridge, gemini_agent, document_bridge, evidence_qa, linked_review, application_directory, course_edits, disputes_bridge
 from output_checks import check_summary
 
 ROOT = Path(__file__).resolve().parent
@@ -173,6 +173,8 @@ class Handler(BaseHTTPRequestHandler):
         if path in ('/branding/mark.svg', '/branding/logo-light.svg', '/branding/logo-dark.svg', '/branding/puffin-pine-concept.png'):
             kind = 'image/png' if path.endswith('.png') else 'image/svg+xml; charset=utf-8'
             return self.respond(200, (ROOT / path.lstrip('/')).read_bytes(), kind)
+        if path in ('/disputes', '/disputes/'):
+            return self.respond(200, disputes_bridge.PAGE.read_bytes(), 'text/html; charset=utf-8')
         if path in ('/', '/index.html', '/app.js', '/markdown.js', '/style.css'):
             file = ROOT / ('index.html' if path == '/' else path[1:]); kind = {'.html':'text/html', '.js':'text/javascript', '.css':'text/css'}[file.suffix]
             return self.respond(200, file.read_bytes(), kind + '; charset=utf-8')
@@ -194,6 +196,13 @@ class Handler(BaseHTTPRequestHandler):
         self.respond(404, {'error':'Not found'})
     def do_POST(self):
         parts = urlparse(self.path).path.strip('/').split('/')
+        if parts == ['api','disputes','run']:
+            try:
+                length = int(self.headers.get('Content-Length','0'))
+                if length > 4096: raise ValueError('Request too large')
+                payload = json.loads(self.rfile.read(length) or b'{}')
+                return self.respond(200, disputes_bridge.run(payload.get('dispute_id','')))
+            except (ValueError, json.JSONDecodeError) as exc: return self.respond(400, {'error':str(exc)})
         if parts == ['api','lab','case-review']:
             try:
                 length=int(self.headers.get('Content-Length','0'))

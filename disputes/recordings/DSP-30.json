@@ -1,0 +1,12 @@
+{
+  "summary": {
+    "text": "The customer disputes 1 transaction, reporting an unspecified problem. They chose Other and the statement does not say enough to suggest a category. No decision has been made; an analyst reviews and decides.",
+    "tokens_in": 130,
+    "tokens_out": 52
+  },
+  "category": {
+    "text": "{\"category\": \"NOT_AS_DESCRIBED\", \"quote\": \"The item arrived damaged.\"}",
+    "tokens_in": 97,
+    "tokens_out": 18
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "summary": {
+    "text": "The customer disputes 2 transactions, reporting a duplicate charge. For the analyst to note: OUT_OF_TIME:T-0701. No decision has been made; an analyst reviews and decides.",
+    "tokens_in": 126,
+    "tokens_out": 43
+  }
+}

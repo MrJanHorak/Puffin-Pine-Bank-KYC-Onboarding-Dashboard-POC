@@ -1,0 +1,7 @@
+{
+  "summary": {
+    "text": "The customer disputes 1 transaction, reporting a duplicate charge. Routed to the fraud queue because the card was reported lost before the charge; a fraud review case is open. No decision has been made; an analyst reviews and decides.",
+    "tokens_in": 134,
+    "tokens_out": 58
+  }
+}

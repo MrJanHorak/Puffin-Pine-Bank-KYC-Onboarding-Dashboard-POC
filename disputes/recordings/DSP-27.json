@@ -1,0 +1,12 @@
+{
+  "summary": {
+    "text": "The customer disputes 1 transaction, reporting an unspecified problem. They chose Other; the suggested category is CANCELLED_RECURRING, based on: \"I stopped my streaming plan in September.\" Please confirm it. No decision has been made; an analyst reviews and decides.",
+    "tokens_in": 130,
+    "tokens_out": 67
+  },
+  "category": {
+    "text": "{\"category\": \"CANCELLED_RECURRING\", \"quote\": \"I stopped my streaming plan in September.\"}",
+    "tokens_in": 102,
+    "tokens_out": 22
+  }
+}

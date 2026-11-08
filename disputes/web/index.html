@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pineway | Dispute triage</title>
+<style>
+  :root { --pine:#102E2E; --evergreen:#17483F; --sage:#B5D5A8; --mist:#F5F7F6; --ink:#1B2E32; --line:#dce8df; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 "DM Sans", system-ui, sans-serif; color:var(--ink); background:var(--mist); }
+  header { background:var(--pine); color:#fff; padding:14px 24px; display:flex; align-items:center; gap:14px; }
+  header img { width:44px; height:40px; object-fit:contain; }
+  header strong { font:700 16px Manrope, system-ui, sans-serif; display:block; }
+  header small { color:#a9c6b5; }
+  .demo { margin-left:auto; border:1px solid var(--sage); color:var(--sage); border-radius:4px; padding:2px 8px; font-size:12px; }
+  main { max-width:880px; margin:24px auto; padding:0 16px; }
+  .panel { background:#fff; border:1px solid var(--line); border-radius:9px; padding:20px; margin-bottom:16px; }
+  h1 { font:700 20px Manrope, system-ui, sans-serif; margin:0 0 4px; }
+  h2 { font:700 15px Manrope, system-ui, sans-serif; margin:0 0 8px; }
+  form { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+  input { font:inherit; padding:8px 10px; border:1px solid #b9c9c0; border-radius:6px; width:160px; }
+  button { font:inherit; padding:8px 14px; border:0; border-radius:6px; background:var(--evergreen); color:#fff; cursor:pointer; }
+  .outputs { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; }
+  .output { border:1px solid var(--line); border-radius:8px; padding:12px; }
+  .output .label { font-size:12px; color:#5c6f6a; text-transform:uppercase; letter-spacing:.4px; }
+  .output .value { font:700 17px Manrope, system-ui, sans-serif; }
+  code { background:var(--mist); padding:1px 5px; border-radius:4px; font-size:13px; }
+  ul { margin:4px 0 0; padding-left:20px; }
+  pre { white-space:pre-wrap; background:var(--mist); padding:12px; border-radius:6px; margin:0; font:14px/1.5 inherit; }
+  .note { color:#5c6f6a; font-size:13px; }
+  .error { color:#8a2c1f; }
+</style>
+</head>
+<body>
+<header>
+  <img src="/branding/puffin-pine-concept.png" alt="">
+  <div><strong>Pineway | Dispute triage</strong><small>Card Operations · Demo workspace</small></div>
+  <span class="demo">DEMO · SPECIMEN DATA</span>
+</header>
+<main>
+  <section class="panel">
+    <h1>Triage a card dispute</h1>
+    <p class="note">The assistant proposes a queue, a reviewer and a readiness, with every reason kept. It never grants, denies or files anything. An analyst decides.</p>
+    <form id="run">
+      <input id="dispute" value="DSP-31" aria-label="Dispute ID" autocomplete="off">
+      <button type="submit">Run triage</button>
+    </form>
+    <p id="status" class="note"></p>
+  </section>
+  <div id="result"></div>
+</main>
+<script>
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const list = items => items.length ? '<ul>' + items.map(i => `<li><code>${esc(i)}</code></li>`).join('') + '</ul>' : '<p class="note">None</p>';
+document.querySelector('#run').addEventListener('submit', async event => {
+  event.preventDefault();
+  const status = document.querySelector('#status'), out = document.querySelector('#result');
+  status.textContent = 'Running…'; out.innerHTML = '';
+  try {
+    const response = await fetch('/api/disputes/run', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({dispute_id: document.querySelector('#dispute').value.trim()})});
+    const r = await response.json();
+    if (!response.ok) throw new Error(r.error || 'Request failed');
+    status.textContent = '';
+    const s = r.category_suggestion;
+    out.innerHTML = `
+      <section class="panel"><h2>Proposal for ${esc(r.dispute_id)}</h2>
+        <div class="outputs">
+          <div class="output"><div class="label">Queue</div><div class="value">${esc(r.queue)}</div></div>
+          <div class="output"><div class="label">Reviewer</div><div class="value">${esc(r.reviewer)}</div></div>
+          <div class="output"><div class="label">Readiness</div><div class="value">${esc(r.readiness)}</div></div>
+        </div>
+        ${r.fraud_review_case ? `<p>Fraud review case <code>${esc(r.fraud_review_case)}</code> is open as a draft.</p>` : ''}
+      </section>
+      <section class="panel"><h2>Reasons</h2>${list(r.reasons)}<h2 style="margin-top:12px">Flags for the analyst</h2>${list(r.flags)}
+        <p class="note">Transactions checked: ${r.checked_txn_ids.map(t => `<code>${esc(t)}</code>`).join(' ')}</p></section>
+      ${s ? `<section class="panel"><h2>Suggested category (model, needs confirmation)</h2><p><code>${esc(s.category)}</code> based on: “${esc(s.quote)}”</p></section>` : ''}
+      <section class="panel"><h2>Case summary (model-drafted)</h2>
+        <p>${r.summary ? esc(r.summary) : '<span class="error">No summary: the model was unavailable.</span>'}</p>
+        <p class="note">Policy: ${r.policy_section ? `<code>${esc(r.policy_section)}</code>` : 'none retrieved'}</p></section>
+      ${r.customer_message_draft ? `<section class="panel"><h2>Customer request (draft, not sent)</h2><pre>${esc(r.customer_message_draft)}</pre>
+        <p class="note">Only an analyst can send this, through the approval gate.</p></section>` : ''}
+      <section class="panel"><h2>Trace</h2><p class="note">${r.trace.map(t => `<code>${esc(t)}</code>`).join(' → ')}</p></section>`;
+  } catch (error) { status.innerHTML = `<span class="error">${esc(error.message)}</span>`; }
+});
+</script>
+</body>
+</html>
