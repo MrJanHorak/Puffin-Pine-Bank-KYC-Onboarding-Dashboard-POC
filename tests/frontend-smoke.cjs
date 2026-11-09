@@ -6,7 +6,7 @@ function el(selector){
  return elements.get(selector);
 }
 const document={querySelector:el,getElementById:id=>el('#'+id),addEventListener(name,fn){handlers.set('document:'+name,fn)}};
-const directory={applications:[{id:'SPECIMEN-APP-5154',company:'SPECIMEN Example Ltd',submitted:'2026-01-01',category:'Not checked',checked_at:null},{id:'SPECIMEN-APP-5201',company:'Halden Logistics Ltd',submitted:'2026-08-15',category:'Not checked',checked_at:null}],counts:{'All applications':2,'Not checked':2,'Needs information':0,'Compliance review':0}};
+const directory={applications:[{id:'SPECIMEN-APP-5154',company:'SPECIMEN Example Ltd',submitted:'2026-01-01',category:'Not checked',checked_at:null},{id:'SPECIMEN-APP-5201',company:'Halden Logistics Ltd',submitted:'2026-08-15',category:'Not checked',checked_at:null}],counts:{'All applications':2,'Not checked':2,'Needs information':0,'Flagged for analyst':0,'Compliance review':0}};
 const detail={application_id:'SPECIMEN-APP-5154',company:{name:'SPECIMEN Example Ltd',registration_number:'REG-1',jurisdiction:'XA',risk_tier:'LOW'},parties:[{id:'SPECIMEN-PTY-1',role:'DIRECTOR',name:'SPECIMEN Person'}],documents:[],fields:[{id:'application_date',label:'Application date',value:'2026-01-01',original:'2026-01-01',available:true}],audit:[]};
 const linked={application_id:'SPECIMEN-APP-5201',linked:true,company:{name:'Halden Logistics Ltd',registration_number:'HL-482913',jurisdiction:'XB',risk_tier:'LOW'},parties:[],documents:[{id:'DOC-1',type:'PROOF_OF_ADDRESS',party_id:'PTY-1',source:'A4.png'}],fields:[],audit:[]};
 const assessment={application_id:'SPECIMEN-APP-5154',status:'NO_FLAGS',status_text:'Test',reasons:[],screenings:[],review_cases:[],policy:{outcome:'not_configured',sections:[]},ownership_chains:[]};
@@ -58,6 +58,16 @@ const wait=()=>new Promise(resolve=>setImmediate(resolve));
  await handlers.get('document:click')({target:{closest(query){return query.startsWith('[data-action]')?evidenceButton:null}}});
  assert.match(el('#detail').innerHTML,/Extracted: Halden/);
  assert.match(el('#detail').innerHTML,/Attach supporting record/);
+ directory.applications[0].category='Flagged for analyst';directory.counts['Flagged for analyst']=1;
+ el('#directory-search').value='unrelated search';
+ const flagged={dataset:{filter:'Flagged for analyst'}};
+ await handlers.get('document:click')({target:{closest(query){return query==='[data-filter]'?flagged:null}}});
+ assert.equal(el('#directory-search').value,'');
+ assert.match(el('#directory-list').innerHTML,/case-flagged/);
+ assert.match(el('#directory-list').innerHTML,/pill flagged/);
+ assert.match(el('#detail').innerHTML,/Example Ltd/);
+ assert.match(el('#metrics').innerHTML,/data-filter="Flagged for analyst" aria-pressed="true"/);
+ assert.match(el('#reports-content').innerHTML,/data-filter="Flagged for analyst" aria-pressed="true"/);
  const filter={dataset:{filter:'Needs information'}};
  await handlers.get('document:click')({target:{closest(query){return query==='[data-filter]'?filter:null}}});
  assert.match(el('#directory-list').innerHTML,/No applications match/);

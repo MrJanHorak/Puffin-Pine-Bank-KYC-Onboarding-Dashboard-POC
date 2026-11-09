@@ -6,7 +6,7 @@ const displayName = value => String(value || 'Name unavailable').replace(/^SPECI
 const label = value => String(value||'').replaceAll('_',' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
 const readableDate = value => {if(!value)return '—';const date=new Date(/^\d{4}-\d{2}-\d{2}$/.test(value)?value+'T12:00:00':value);return Number.isNaN(date.valueOf())?value:new Intl.DateTimeFormat(undefined,{year:'numeric',month:'short',day:'numeric'}).format(date)};
 const readableTime = value => {if(!value)return '—';const date=new Date(value);return Number.isNaN(date.valueOf())?value:new Intl.DateTimeFormat(undefined,{year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(date)};
-const badge = text => {const cls=text==='Compliance review'?'compliance':text==='Needs information'||text==='Needs recheck'||text==='Screening unavailable'?'info':text==='No rule flags'?'ready':'';return `<span class="pill ${cls}">${esc(text)}</span>`};
+const badge = text => {const cls=text==='Flagged for analyst'||text==='Flagged'?'flagged':text==='Compliance review'?'compliance':text==='Needs information'||text==='Needs recheck'||text==='Screening unavailable'?'info':text==='No rule flags'?'ready':'';return `<span class="pill ${cls}">${esc(text)}</span>`};
 async function api(url,options){const response=await fetch(url,options);const body=await response.json();if(!response.ok)throw new Error(body.error||'Request failed');return body}
 function currentItem(){return state.directory?.applications.find(item=>item.id===state.selected)}
 function explainReason(code){
@@ -30,8 +30,8 @@ function nextStep(item,result){
 function renderMetrics(){
  if(!state.directory)return;
  const counts=state.directory.counts;
- const cards=[['All applications','in the queue'],['Not checked','awaiting checks'],['Needs information','evidence to review'],['Compliance review','requires review']];
- $('#metrics').innerHTML=cards.map(([key,caption])=>`<button type="button" class="metric metric-action" data-filter="${esc(key)}" aria-pressed="${state.filter===key}"><span class="label">${esc(key)}</span><span class="number">${esc(counts[key])}</span><span class="caption">${esc(caption)}</span></button>`).join('');
+ const cards=[['All applications','in the queue'],['Not checked','awaiting checks'],['Needs information','evidence to review'],['Flagged for analyst','requires attention'],['Compliance review','requires review']];
+ $('#metrics').innerHTML=cards.map(([key,caption])=>`<button type="button" class="metric metric-action ${key==='Flagged for analyst'?'flagged-metric':''}" data-filter="${esc(key)}" aria-pressed="${state.filter===key}"><span class="label">${esc(key)}</span><span class="number">${esc(counts[key])}</span><span class="caption">${esc(caption)}</span></button>`).join('');
  $('#nav-count').textContent=counts['All applications'];
 }
 function renderQueue(){
@@ -42,7 +42,7 @@ function renderQueue(){
  const query=$('#directory-search').value.trim().toLowerCase();
  const matches=state.directory.applications.filter(item=>(state.filter==='All applications'||item.category===state.filter)&&(!query||(item.id+' '+item.company).toLowerCase().includes(query)));
  $('#directory-summary').textContent=matches.length+' applications';
- $('#directory-list').innerHTML=matches.slice(0,state.limit).map(item=>`<button type="button" class="case ${state.selected===item.id?'selected':''}" data-open-case="${esc(item.id)}"><div class="case-top"><span class="company-icon">${esc(displayName(item.company).charAt(0))}</span><span><span class="case-title">${esc(displayName(item.company))}</span><span class="case-id">${esc(item.id)}</span></span></div><div class="case-foot">${badge(item.category)}<span>Submitted ${esc(readableDate(item.submitted))}</span></div></button>`).join('')||'<p class="queue-empty">No applications match.</p>';
+ $('#directory-list').innerHTML=matches.slice(0,state.limit).map(item=>`<button type="button" class="case ${item.category==='Flagged for analyst'?'case-flagged ':''}${state.selected===item.id?'selected':''}" data-open-case="${esc(item.id)}"><div class="case-top"><span class="company-icon">${esc(displayName(item.company).charAt(0))}</span><span><span class="case-title">${esc(displayName(item.company))}</span><span class="case-id">${esc(item.id)}</span></span></div><div class="case-foot">${badge(item.category)}<span>Submitted ${esc(readableDate(item.submitted))}</span></div></button>`).join('')||'<p class="queue-empty">No applications match.</p>';
  $('#directory-more').hidden=matches.length<=state.limit;
 }
 async function loadDirectory(){
@@ -112,7 +112,17 @@ async function loadActivity(){
 function renderReports(){
  if(!state.directory)return;
  const counts=state.directory.counts;
- $('#reports-content').innerHTML=`<div class="report-grid">${Object.entries(counts).map(([name,count])=>`<div><span>${esc(name)}</span><strong>${esc(count)}</strong></div>`).join('')}</div><p>Counts reflect checks recorded in this workspace, not elapsed onboarding time.</p>`;
+ $('#reports-content').innerHTML=`<div class="report-grid">${Object.entries(counts).map(([name,count])=>`<button type="button" class="report-filter ${name==='Flagged for analyst'?'flagged-report':''}" data-filter="${esc(name)}" aria-pressed="${state.filter===name}"><span>${esc(name)}</span><strong>${esc(count)}</strong></button>`).join('')}</div><p>Select a count to view its applications. Counts reflect checks recorded in this workspace, not elapsed onboarding time.</p>`;
+}
+async function applyFilter(filter,clearSearch=false){
+ state.filter=filter;state.limit=20;if(clearSearch)$('#directory-search').value='';
+ const query=$('#directory-search').value.trim().toLowerCase();
+ const matches=state.directory.applications.filter(item=>(filter==='All applications'||item.category===filter)&&(!query||(item.id+' '+item.company).toLowerCase().includes(query)));
+ renderMetrics();renderQueue();renderReports();
+ if(!matches.some(item=>item.id===state.selected)){
+  if(matches.length)await openCase(matches[0].id);
+  else{state.request++;state.selected=null;state.detail=null;renderDetail()}
+ }
 }
 async function sendReview(button){
  const id=state.selected,reviewId=button.dataset.reviewId,action=button.dataset.reviewAction;
@@ -156,7 +166,7 @@ async function ask(button,type){
  catch(error){if(state.selected===id)target.innerHTML=`<div class="error">${esc(error.message)}</div>`}finally{button.disabled=false}
 }
 document.addEventListener('click',async event=>{
- const filter=event.target.closest('[data-filter]');if(filter){state.filter=filter.dataset.filter;state.limit=20;renderMetrics();renderQueue();$('#applications').scrollIntoView({behavior:'smooth'});return}
+ const filter=event.target.closest('[data-filter]');if(filter){await applyFilter(filter.dataset.filter,true);$('#applications').scrollIntoView({behavior:'smooth'});return}
  const selected=event.target.closest('[data-open-case]');if(selected){await openCase(selected.dataset.openCase);return}
  const button=event.target.closest('[data-action],[data-edit-save],[data-edit-reset],[data-linked-field],[data-supplement],[data-review-id]');if(!button)return;
  try{
@@ -172,7 +182,7 @@ document.addEventListener('click',async event=>{
   if(button.dataset.action==='ask-document'){await ask(button,'document');return}
  }catch(error){button.disabled=false;alert(error.message)}
 });
-$('#directory-filter').addEventListener('change',event=>{state.filter=event.target.value;state.limit=20;renderMetrics();renderQueue()});
+$('#directory-filter').addEventListener('change',event=>{applyFilter(event.target.value)});
 $('#directory-search').addEventListener('input',()=>{state.limit=20;renderQueue()});
 $('#directory-more').addEventListener('click',()=>{state.limit+=20;renderQueue()});
 (async()=>{try{await loadDirectory();if(state.selected)await openCase(state.selected);await loadActivity()}catch(error){$('#detail').innerHTML=`<div class="error">Could not load applications: ${esc(error.message)}</div>`}})();
