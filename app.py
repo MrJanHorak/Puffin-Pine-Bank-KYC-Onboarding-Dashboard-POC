@@ -175,6 +175,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.respond(200, (ROOT / path.lstrip('/')).read_bytes(), kind)
         if path in ('/disputes', '/disputes/'):
             return self.respond(200, disputes_bridge.PAGE.read_bytes(), 'text/html; charset=utf-8')
+        if path == '/api/disputes':
+            return self.respond(200, disputes_bridge.listing())
+        if path == '/api/disputes/policies':
+            return self.respond(200, disputes_bridge.policies())
         if path in ('/', '/index.html', '/app.js', '/markdown.js', '/style.css'):
             file = ROOT / ('index.html' if path == '/' else path[1:]); kind = {'.html':'text/html', '.js':'text/javascript', '.css':'text/css'}[file.suffix]
             return self.respond(200, file.read_bytes(), kind + '; charset=utf-8')
@@ -201,7 +205,7 @@ class Handler(BaseHTTPRequestHandler):
                 length = int(self.headers.get('Content-Length','0'))
                 if length > 4096: raise ValueError('Request too large')
                 payload = json.loads(self.rfile.read(length) or b'{}')
-                return self.respond(200, disputes_bridge.run(payload.get('dispute_id','')))
+                return self.respond(200, disputes_bridge.run(payload.get('dispute_id',''), payload.get('outage') is True))
             except (ValueError, json.JSONDecodeError) as exc: return self.respond(400, {'error':str(exc)})
         if parts == ['api','lab','case-review']:
             try:
