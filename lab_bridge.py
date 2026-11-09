@@ -30,19 +30,29 @@ def ownership_evidence(pack):
                            'company_id':pack['company']['party_id']})
     return chains
 
-def run_course_case(application_id):
+def run_course_case(application_id, review_state=None):
     if not isinstance(application_id, str) or not re.fullmatch(r'SPECIMEN-APP-\d{4}', application_id):
         raise ValueError('Use an application ID such as SPECIMEN-APP-5154.')
     linked = application_id == linked_case.APPLICATION_ID
-    pack, extracted = linked_case.build_pack() if linked else (data_layer.get_application_pack(application_id), None)
+    pack, extracted = linked_case.build_pack(review_state) if linked else (data_layer.get_application_pack(application_id), None)
     if pack is None: raise ValueError('Application not found.')
     application = {'parties':[{'party_id':p['party_id']} for p in rules.parties_to_screen(pack)]} if linked else tools.get_application(application_id)
     trace = [{'kind':'tool','name':'get_application','ok':True,'party_ids':[p['party_id'] for p in application['parties']]}]
     screenings = routing.screen_every_party(pack, tools.FaultPlan(), trace)
     status, reasons = rules.check_application(pack, screenings)
     if linked:
-        # The practice documents do not establish the full director list or PEP declarations.
-        reasons = sorted(set(reasons + ['MISSING_FIELD:director_list','MISSING_FIELD:declared_pep']))
+        # The original practice pack does not establish a complete director list or PEP declarations.
+        extra = []
+        if not extracted['supplement_ready']: extra += ['MISSING_FIELD:director_list','MISSING_FIELD:declared_pep']
+        if extracted['review_items']: extra.append('MISSING_FIELD:document_review')
+        proof = rules.document(pack, 'PROOF_OF_ADDRESS')
+        if proof and proof.get('name_on_document') and rules.normalise_name(proof['name_on_document']) != rules.normalise_name(pack['company']['full_name'] or ''):
+            extra.append('MISSING_FIELD:proof_of_address_name_mismatch')
+        proof_date = rules.as_date(proof.get('document_date')) if proof else None
+        application_date = rules.as_date(pack['application_date'])
+        if proof_date and application_date and proof_date > application_date:
+            extra.append('MISSING_FIELD:proof_of_address_after_application')
+        reasons = sorted(set(reasons + extra))
         status = rules.status_for(reasons)
     reviews = []
     with _review_lock:
@@ -70,7 +80,9 @@ def run_course_case(application_id):
             'trace':trace,
             'linked_document_case': linked_case.DOCUMENT_CASE if linked else None,
             'document_review_items': extracted['review_items'] if linked else [],
-            'case_notes': ['Synthetic application date: 2026-08-15.', 'Director list and PEP declarations have not been provided.', 'Fields below the extraction review threshold are not accepted as verified KYC data.'] if linked else [],
+            'case_notes': (['Synthetic application date: 2026-08-15.',
+                'Synthetic supplemental records reviewed.' if extracted['supplement_ready'] else 'Director list and PEP declarations have not been verified.',
+                'Low-confidence fields require analyst review before use.'] if linked else []),
             'ownership_chains': ownership_evidence(pack) if 'COMPLEX_OWNERSHIP' in reasons else [],
             'note':'Synthetic course rules and watchlist. A person reviews and decides.'}
 

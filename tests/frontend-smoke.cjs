@@ -5,16 +5,16 @@ const vm = require('node:vm');
 const handlers = new Map();
 const elements = new Map();
 function el(selector) {
-  if (!elements.has(selector)) elements.set(selector, {value:'', innerHTML:'', disabled:false, addEventListener(name, handler) { handlers.set(selector+':'+name, handler); }});
+  if (!elements.has(selector)) elements.set(selector, {value:'', innerHTML:'', disabled:false, scrollIntoView(){}, addEventListener(name, handler) { handlers.set(selector+':'+name, handler); }});
   return elements.get(selector);
 }
 el('#doc-case').value = 'CASE-B';
 el('#lab-id').value = 'SPECIMEN-APP-5154';
 const document = {querySelector:el, addEventListener() {}};
-const cases = {cases:[], operations:{events:[], sample_counts:{}, review_case_count:0, scope:'test'}, docs:{notice:'test',evidence:[],review_items:[]},
+const cases = {cases:[], operations:{events:[], sample_counts:{}, review_case_count:0, scope:'test'}, directory:{applications:[{id:'SPECIMEN-APP-5154',company:'SPECIMEN Example Ltd',submitted:'2026-01-01',category:'Not checked',checked_at:null}],counts:{'All applications':1,'Not checked':1,'Needs information':0,'Compliance review':0}}, docs:{notice:'test',evidence:[],review_items:[]},
   lab:{application_id:'SPECIMEN-APP-5154',status:'NO_FLAGS',status_text:'Test',reasons:[],screenings:[],review_cases:[],policy:{outcome:'not_configured',sections:[]}}};
 async function fetch(url) {
-  let data = url === '/api/cases' ? cases.cases : url === '/api/operations' ? cases.operations : url === '/api/lab/applications' ? {application_ids:['SPECIMEN-APP-5154']} : url.startsWith('/api/documents/') ? cases.docs : url === '/api/lab/run' ? cases.lab : {};
+  let data = url === '/api/cases' ? cases.cases : url === '/api/operations' ? cases.operations : url === '/api/lab/directory' ? cases.directory : url === '/api/lab/applications' ? {application_ids:['SPECIMEN-APP-5154']} : url.startsWith('/api/documents/') ? cases.docs : url === '/api/lab/run' ? cases.lab : {};
   return {ok:true, async json(){return data;}};
 }
 const context = vm.createContext({document,fetch,console,alert(){},encodeURIComponent});
@@ -31,5 +31,14 @@ vm.runInContext(fs.readFileSync('app.js','utf8'),context);
   await handlers.get('#lab-form:submit')(submit);
   assert.equal(el('#lab-form button[type="submit"]').disabled,false);
   assert.match(el('#lab-result').innerHTML,/SPECIMEN-APP-5154/);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.match(el('#directory-list').innerHTML,/SPECIMEN-APP-5154/);
+  assert.match(el('#metrics').innerHTML,/Not checked/);
+  handlers.get('#metrics:click')({target:{closest(){return {dataset:{directoryFilter:'Needs information'}}}}});
+  assert.match(el('#directory-list').innerHTML,/No applications match/);
+  const review=context.renderLinkedReview({corrections:{},supplement:'not_attached',audit:[]},[{id:'A4:name',value:'uncertain',confidence:0.57,document:'A4.png'}]);
+  assert.match(review,/Original extraction: uncertain/);
+  assert.match(review,/Save reviewed value/);
+  assert.match(review,/Attach sample supplement/);
   console.log('Frontend smoke checks passed');
 })().catch(error=>{console.error(error);process.exitCode=1});

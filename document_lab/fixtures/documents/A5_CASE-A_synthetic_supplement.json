@@ -1,0 +1,9 @@
+{
+  "document_id": "A5",
+  "case_id": "CASE-A",
+  "kind": "synthetic_training_supplement",
+  "notice": "Invented POC evidence for the training workflow. This is not a passport, official registry record, or real customer information.",
+  "identity": {"name": "Oskar Brant", "date_of_birth": "1975-11-23", "expiry_date": "2031-08-31"},
+  "directors": [{"name": "Maren Tolvik", "date_of_birth": "1981-07-02"}],
+  "pep_declarations": {"company": "N", "Maren Tolvik": "N", "Oskar Brant": "N"}
+}

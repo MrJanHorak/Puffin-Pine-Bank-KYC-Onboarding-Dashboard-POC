@@ -1,8 +1,8 @@
-import io, json, os, tempfile, unittest
+import io, json, os, sqlite3, tempfile, unittest
 from pathlib import Path
 from unittest.mock import patch
 from urllib.error import HTTPError
-import document_bridge, evidence_qa, gemini_agent, lab_bridge
+import document_bridge, evidence_qa, gemini_agent, lab_bridge, linked_review
 from output_checks import check_summary
 
 class EnhancementsTests(unittest.TestCase):
@@ -55,6 +55,17 @@ class EnhancementsTests(unittest.TestCase):
         self.assertTrue(case['recommendation_held'])
         self.assertTrue(case['document_review_items'])
         self.assertEqual(gemini_agent.run_agent(case)['mode'],'held')
+    def test_review_is_invalidated_when_its_source_changes(self):
+        folder=Path(self.tmp.name); source=folder/'A4.png'; sidecar=folder/'A4.ocr.json'; schema=folder/'schema.yaml'
+        source.write_bytes(b'original image'); sidecar.write_text('original OCR'); schema.write_text('original schema')
+        sample={'evidence':[{'id':'A4:name','document':'A4.png','value':'uncertain','review_required':True}]}
+        with patch.object(linked_review,'DOCS',folder), patch.object(linked_review,'SCHEMA',schema), patch.object(linked_review,'supplement',return_value=({},'sample-hash')):
+            with sqlite3.connect(':memory:') as db:
+                db.row_factory=sqlite3.Row; linked_review.init(db)
+                linked_review.execute(db,sample,'correct','A4:name','reviewed value')
+                self.assertTrue(linked_review.snapshot(db,sample)['corrections']['A4:name']['valid'])
+                source.write_bytes(b'changed image')
+                self.assertFalse(linked_review.snapshot(db,sample)['corrections']['A4:name']['valid'])
     def test_document_answer_validates_source_and_quote(self):
         sources=[{'id':'A1:registration_number','text':'REG-1234','description':'A1.pdf'}]
         def response(obj):
