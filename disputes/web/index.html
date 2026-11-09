@@ -4,31 +4,101 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pineway | Dispute triage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root { --pine:#102E2E; --evergreen:#17483F; --sage:#B5D5A8; --mist:#F5F7F6; --ink:#1B2E32; --line:#dce8df; }
-  * { box-sizing: border-box; }
-  body { margin:0; font:15px/1.5 "DM Sans", system-ui, sans-serif; color:var(--ink); background:var(--mist); }
+  :root { --pine:#102E2E; --evergreen:#17483F; --sage:#B5D5A8; --mist:#F3F6F4; --ink:#1B2E32; --muted:#5c6f6a; --line:#dce8df;
+          --fraud:#a1361f; --fraud-bg:#fbeae5; --warn:#8a5a00; --warn-bg:#fdf3dc; --ok:#1d6b45; --ok-bg:#e3f3ea; --info:#2b5c8a; --info-bg:#e6eff8; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.55 "DM Sans", system-ui, sans-serif; color:var(--ink); background:var(--mist); }
   header { background:var(--pine); color:#fff; padding:14px 24px; display:flex; align-items:center; gap:14px; }
   header img { width:44px; height:40px; object-fit:contain; }
   header strong { font:700 16px Manrope, system-ui, sans-serif; display:block; }
   header small { color:#a9c6b5; }
   .demo { margin-left:auto; border:1px solid var(--sage); color:var(--sage); border-radius:4px; padding:2px 8px; font-size:12px; }
-  main { max-width:880px; margin:24px auto; padding:0 16px; }
-  .panel { background:#fff; border:1px solid var(--line); border-radius:9px; padding:20px; margin-bottom:16px; }
-  h1 { font:700 20px Manrope, system-ui, sans-serif; margin:0 0 4px; }
-  h2 { font:700 15px Manrope, system-ui, sans-serif; margin:0 0 8px; }
-  form { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
-  input { font:inherit; padding:8px 10px; border:1px solid #b9c9c0; border-radius:6px; width:160px; }
-  button { font:inherit; padding:8px 14px; border:0; border-radius:6px; background:var(--evergreen); color:#fff; cursor:pointer; }
-  .outputs { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; }
-  .output { border:1px solid var(--line); border-radius:8px; padding:12px; }
-  .output .label { font-size:12px; color:#5c6f6a; text-transform:uppercase; letter-spacing:.4px; }
-  .output .value { font:700 17px Manrope, system-ui, sans-serif; }
-  code { background:var(--mist); padding:1px 5px; border-radius:4px; font-size:13px; }
-  ul { margin:4px 0 0; padding-left:20px; }
-  pre { white-space:pre-wrap; background:var(--mist); padding:12px; border-radius:6px; margin:0; font:14px/1.5 inherit; }
-  .note { color:#5c6f6a; font-size:13px; }
-  .error { color:#8a2c1f; }
+  h1, h2, h3 { font-family:Manrope, system-ui, sans-serif; }
+  .hero { background:linear-gradient(135deg, var(--evergreen), var(--pine)); color:#fff; padding:28px 24px 26px; }
+  .hero-inner { max-width:1180px; margin:0 auto; }
+  .hero h1 { font-size:26px; margin:0 0 6px; font-weight:800; }
+  .hero p { margin:0; max-width:760px; color:#d6e7dc; }
+  .rules { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+  .rules span { background:rgba(255,255,255,.1); border:1px solid rgba(181,213,168,.4); border-radius:999px; padding:4px 12px; font-size:13px; }
+  .layout { max-width:1180px; margin:20px auto; padding:0 16px; display:grid; grid-template-columns:320px 1fr; gap:20px; align-items:start; }
+  aside { position:sticky; top:16px; }
+  .panel { background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin-bottom:16px; }
+  .panel h2 { font-size:16px; margin:0 0 10px; }
+  .eyebrow { font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); font-weight:700; margin:0 0 4px; }
+  .picks { display:flex; flex-direction:column; gap:6px; }
+  .pick { text-align:left; font:inherit; background:#fff; border:1px solid var(--line); border-radius:9px; padding:9px 11px; cursor:pointer; color:var(--ink); }
+  .pick:hover { border-color:var(--evergreen); }
+  .pick.active { border-color:var(--evergreen); background:#eef6f1; box-shadow:inset 3px 0 0 var(--evergreen); }
+  .pick b { font-family:Manrope, system-ui, sans-serif; font-size:13px; }
+  .pick span { display:block; font-size:13px; color:var(--muted); }
+  select { font:inherit; width:100%; padding:8px; border:1px solid #b9c9c0; border-radius:8px; background:#fff; margin-top:6px; }
+  label.toggle { display:flex; gap:8px; align-items:flex-start; font-size:13px; margin-top:12px; cursor:pointer; }
+  .run { width:100%; margin-top:12px; font:700 15px Manrope, system-ui, sans-serif; padding:11px; border:0; border-radius:9px; background:var(--evergreen); color:#fff; cursor:pointer; }
+  .run:hover { background:var(--pine); }
+  .empty { text-align:center; padding:60px 20px; color:var(--muted); }
+  .empty h2 { color:var(--ink); }
+  .step { display:flex; gap:12px; align-items:center; margin:0 0 10px; }
+  .step .n { flex:none; width:28px; height:28px; border-radius:50%; background:var(--evergreen); color:#fff; display:grid; place-items:center; font:800 14px Manrope, sans-serif; }
+  .step h2 { margin:0; font-size:18px; }
+  .step small { color:var(--muted); display:block; font-size:13px; }
+  blockquote { margin:0 0 12px; padding:12px 16px; background:var(--mist); border-left:4px solid var(--sage); border-radius:6px; font-size:16px; }
+  .meta { display:flex; flex-wrap:wrap; gap:6px 18px; font-size:13px; color:var(--muted); margin-bottom:10px; }
+  .meta b { color:var(--ink); }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th { text-align:left; font-size:12px; color:var(--muted); font-weight:600; border-bottom:1px solid var(--line); padding:6px 8px; }
+  td { padding:7px 8px; border-bottom:1px solid #eef3ef; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; }
+  .missing { color:var(--fraud); font-weight:600; }
+  .trace { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .trace .t { background:var(--mist); border:1px solid var(--line); border-radius:8px; padding:6px 10px; font-size:13px; }
+  .trace .t.ai { background:var(--info-bg); border-color:#c6d8eb; color:var(--info); }
+  .trace .t.case { background:var(--fraud-bg); border-color:#efc9bf; color:var(--fraud); }
+  .trace .arrow { color:var(--muted); }
+  .outputs { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; }
+  .out { border-radius:10px; padding:14px; border:1px solid var(--line); }
+  .out .label { font-size:11px; text-transform:uppercase; letter-spacing:.6px; font-weight:700; opacity:.8; }
+  .out .value { font:800 20px Manrope, system-ui, sans-serif; margin:2px 0; }
+  .out .why { font-size:13px; }
+  .tone-ok { background:var(--ok-bg); color:var(--ok); border-color:#c3e3d0; }
+  .tone-warn { background:var(--warn-bg); color:var(--warn); border-color:#f0dcae; }
+  .tone-fraud { background:var(--fraud-bg); color:var(--fraud); border-color:#efc9bf; }
+  .tone-info { background:var(--info-bg); color:var(--info); border-color:#c6d8eb; }
+  .tone-plain { background:#fff; color:var(--ink); }
+  .findings { list-style:none; padding:0; margin:12px 0 0; display:flex; flex-direction:column; gap:8px; }
+  .findings li { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; border-radius:9px; border:1px solid var(--line); }
+  .chip { flex:none; font:700 11px/1 Manrope, sans-serif; padding:5px 8px; border-radius:999px; letter-spacing:.3px; }
+  .findings code { font-size:12px; color:var(--muted); }
+  .ai-tag { display:inline-block; font:700 11px Manrope, sans-serif; background:var(--info-bg); color:var(--info); border-radius:999px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
+  pre { white-space:pre-wrap; background:var(--mist); padding:12px; border-radius:8px; margin:0; font:14px/1.5 "DM Sans", system-ui, sans-serif; }
+  .decide { background:var(--pine); color:#fff; border-radius:12px; padding:18px 20px; display:flex; gap:16px; align-items:center; }
+  .decide .icon { font-size:28px; }
+  .decide p { margin:2px 0 0; color:#c9ddd1; font-size:14px; }
+  .note { color:var(--muted); font-size:13px; }
+  .error { color:var(--fraud); }
+  .checks td:first-child { width:120px; }
+  .status { display:inline-block; font:700 11px/1 Manrope, sans-serif; padding:5px 8px; border-radius:999px; white-space:nowrap; }
+  .st-met { background:var(--ok-bg); color:var(--ok); } .st-missing { background:var(--warn-bg); color:var(--warn); }
+  .st-flag { background:#eef1f0; color:var(--ink); } .st-check { background:var(--info-bg); color:var(--info); }
+  .sec { font:700 12px Manrope, sans-serif; color:var(--evergreen); background:#eef6f1; border:1px solid #cfe3d6; border-radius:6px; padding:3px 7px; cursor:pointer; }
+  .sec:hover { background:var(--evergreen); color:#fff; }
+  .cite { border:1px solid #cfe3d6; background:#f6fbf8; border-radius:10px; padding:12px 14px; margin-bottom:14px; }
+  .cite p { margin:4px 0 0; font-size:15px; }
+  .linkbtn { font:600 14px "DM Sans", sans-serif; background:none; border:1px solid var(--line); border-radius:9px; padding:9px; width:100%; margin-top:8px; cursor:pointer; color:var(--evergreen); }
+  .linkbtn:hover { border-color:var(--evergreen); }
+  .scrim { position:fixed; inset:0; background:rgba(16,46,46,.35); opacity:0; pointer-events:none; transition:opacity .2s; }
+  .scrim.open { opacity:1; pointer-events:auto; }
+  .drawer { position:fixed; top:0; right:0; bottom:0; width:min(460px, 100%); background:#fff; box-shadow:-8px 0 30px rgba(0,0,0,.15); transform:translateX(100%); transition:transform .25s; overflow-y:auto; padding:20px 22px 40px; }
+  .drawer.open { transform:none; }
+  .drawer h2 { margin:0 0 4px; font-size:20px; }
+  .drawer h3 { font-size:15px; margin:20px 0 6px; }
+  .drawer .close { float:right; font:inherit; border:1px solid var(--line); background:#fff; border-radius:8px; padding:4px 10px; cursor:pointer; }
+  .psec { border:1px solid var(--line); border-radius:9px; padding:10px 12px; margin-bottom:8px; transition:background .3s, border-color .3s; }
+  .psec b { font:700 13px Manrope, sans-serif; color:var(--evergreen); }
+  .psec.hit { background:#fff8e1; border-color:#e6c766; }
+  @media (max-width: 860px) { .layout { grid-template-columns:1fr; } aside { position:static; } .outputs { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -37,52 +107,182 @@
   <div><strong>Pineway | Dispute triage</strong><small>Card Operations · Demo workspace</small></div>
   <span class="demo">DEMO · SPECIMEN DATA</span>
 </header>
-<main>
-  <section class="panel">
-    <h1>Triage a card dispute</h1>
-    <p class="note">The assistant proposes a queue, a reviewer and a readiness, with every reason kept. It never grants, denies or files anything. An analyst decides.</p>
-    <form id="run">
-      <input id="dispute" value="DSP-31" aria-label="Dispute ID" autocomplete="off">
-      <button type="submit">Run triage</button>
-    </form>
-    <p id="status" class="note"></p>
-  </section>
-  <div id="result"></div>
-</main>
+<section class="hero"><div class="hero-inner">
+  <h1>Sort a card dispute in seconds, and leave the decision to a person</h1>
+  <p>A customer says "I was charged twice" or "my order never arrived." Today an analyst spends the morning looking things up before they can even route it. This assistant reads the dispute, checks the bank's records and rules, and proposes where it goes and what's missing.</p>
+  <div class="rules"><span>✓ Proposes team, reviewer and readiness</span><span>✓ Shows every reason</span><span>✗ Never approves or refunds</span><span>✗ Never emails a customer</span><span>✓ Masks card numbers</span></div>
+</div></section>
+
+<div class="layout">
+  <aside>
+    <div class="panel">
+      <p class="eyebrow">Pick a dispute</p>
+      <div class="picks" id="picks"></div>
+      <p class="eyebrow" style="margin-top:14px">Or any of the 41</p>
+      <select id="all" aria-label="All disputes"></select>
+      <label class="toggle"><input type="checkbox" id="outage"> <span>Simulate the policy search being down<br><span class="note">Shows what happens when a lookup fails</span></span></label>
+      <button class="run" id="run">Run triage</button>
+      <p id="status" class="note"></p>
+      <button class="linkbtn" data-sec="">📖 Open the policy manual</button>
+    </div>
+  </aside>
+  <main id="result">
+    <div class="panel empty"><h2>Pick a dispute on the left and run it</h2><p>You'll see what the customer said, what the assistant checked, and what it proposes.</p></div>
+  </main>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Policy manual">
+  <button class="close" id="close">Close</button>
+  <h2>Policy manual</h2>
+  <p class="note">Puffin &amp; Pine card dispute policy (SPECIMEN, invented for training). Every check the assistant runs points back to a section here.</p>
+  <div id="manual"></div>
+</aside>
 <script>
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const list = items => items.length ? '<ul>' + items.map(i => `<li><code>${esc(i)}</code></li>`).join('') + '</ul>' : '<p class="note">None</p>';
-document.querySelector('#run').addEventListener('submit', async event => {
-  event.preventDefault();
-  const status = document.querySelector('#status'), out = document.querySelector('#result');
-  status.textContent = 'Running…'; out.innerHTML = '';
+const money = v => v == null || v === '' ? '—' : '$' + Number(v).toFixed(2);
+const words = s => String(s || '').toLowerCase().replace(/_/g, ' ');
+
+const FEATURED = [
+  ['DSP-31', 'The easy one', 'Order never arrived; everything checks out'],
+  ['DSP-10', 'Something missing', 'Drafts a request to the customer, not sent'],
+  ['DSP-28', 'AI reads the story', 'Vague complaint; the model spots possible fraud'],
+  ['DSP-38', 'Card number in text', 'Full card number is masked before anything sees it'],
+  ['DSP-17', 'Fraud pattern', 'Charges at 3+ shops within 24 hours'],
+];
+
+const CODES = {
+  FRAUD_CLAIM: ['fraud', 'Customer says they didn\'t make it', 'Goes to the fraud team, and a draft fraud case is opened.'],
+  CARD_REPORTED_LOST: ['fraud', 'Card was reported lost or stolen', 'The charge happened after the card was reported.'],
+  CLUSTER_24H: ['fraud', 'Fraud pattern', 'Charges at 3 or more different shops within 24 hours.'],
+  POSSIBLE_FRAUD_SUGGESTED: ['fraud', 'AI thinks this sounds like fraud', 'The model read the story. A person confirms before anything happens.'],
+  HIGH_VALUE: ['info', 'High value', 'Over $1,000 in total, so a senior reviewer takes it.'],
+  TXN_NOT_FOUND: ['warn', 'Transaction not found', 'The customer listed a charge that isn\'t in our records.'],
+  MISSING_FIELD: ['warn', 'Required information is blank', 'The dispute can\'t move until it\'s filled in.'],
+  MISSING_EVIDENCE: ['warn', 'Missing evidence', 'Policy needs this from the customer before a decision.'],
+  DATE_UNREADABLE: ['warn', 'Date can\'t be read', 'Can\'t check time limits without it.'],
+  LOOKUP_UNAVAILABLE: ['warn', 'Policy search was down', 'It stops and says so instead of guessing.'],
+  OUT_OF_TIME: ['plain', 'Past the 120-day limit', 'Flag only. The analyst decides whether it still applies.'],
+  AMOUNT_MISMATCH: ['plain', 'Amounts don\'t match', 'What the customer claims differs from what was charged.'],
+  DUPLICATE_DISPUTE: ['plain', 'Already disputed', 'This charge is in another open dispute.'],
+  CATEGORY_UNCLEAR: ['plain', 'Couldn\'t tell what kind of dispute', 'The AI wasn\'t confident, so it says so rather than guess.'],
+};
+const QUEUE = { FRAUD: ['Fraud team', 'tone-fraud', 'Possible fraud. Routed so it doesn\'t sit in the general queue.'],
+                GENERAL: ['General disputes', 'tone-ok', 'No fraud signals found.'] };
+const REVIEWER = { SENIOR: ['Senior', 'tone-info', 'Over $1,000 in total.'], STANDARD: ['Standard', 'tone-plain', 'Under the senior threshold.'] };
+const READY = { READY: ['Ready', 'tone-ok', 'An analyst can pick it up now.'],
+                NEEDS_INFO: ['Needs info', 'tone-warn', 'Something is missing. See below.'],
+                LOOKUP_UNAVAILABLE: ['Couldn\'t check policy', 'tone-warn', 'A lookup failed, so it\'s held instead of guessed.'] };
+const STEPS = { get_dispute: ['Read the dispute', ''], get_transactions: ['Checked the card\'s transactions', ''],
+                search_policy: ['Searched the policy manual', ''], 'model:category': ['AI read the story', 'ai'],
+                'model:summary': ['AI drafted the summary', 'ai'], open_review_case: ['Opened a draft fraud case', 'case'] };
+
+const STATUS = { met: '✓ Meets', missing: '✗ Missing', flag: '⚑ Flagged', check: '👁 You check' };
+
+// Policy manual drawer: any element with data-sec opens it at that section.
+const drawer = document.querySelector('#drawer'), scrim = document.querySelector('#scrim');
+fetch('/api/disputes/policies').then(r => r.json()).then(docs => {
+  document.querySelector('#manual').innerHTML = docs.map(d => `<h3>${esc(d.id)} · ${esc(d.title)}</h3>` +
+    d.sections.map(x => `<div class="psec" id="sec-${esc(x.id)}"><b>${esc(x.id)}</b><div>${esc(x.text)}</div></div>`).join('')).join('');
+});
+function openPolicy(id) {
+  drawer.classList.add('open'); scrim.classList.add('open');
+  drawer.querySelectorAll('.psec').forEach(el => el.classList.toggle('hit', el.id === 'sec-' + id));
+  const hit = id && document.getElementById('sec-' + id);
+  if (hit) hit.scrollIntoView({block:'center', behavior:'smooth'}); else drawer.scrollTop = 0;
+}
+function closePolicy() { drawer.classList.remove('open'); scrim.classList.remove('open'); }
+document.addEventListener('click', e => { const b = e.target.closest('[data-sec]'); if (b) openPolicy(b.dataset.sec); });
+scrim.addEventListener('click', closePolicy);
+document.querySelector('#close').addEventListener('click', closePolicy);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePolicy(); });
+
+const picks = document.querySelector('#picks'), all = document.querySelector('#all');
+let current = 'DSP-31';
+picks.innerHTML = FEATURED.map(([id, t, d]) => `<button class="pick" data-id="${id}"><b>${id} · ${esc(t)}</b><span>${esc(d)}</span></button>`).join('');
+picks.addEventListener('click', e => { const b = e.target.closest('.pick'); if (b) { select(b.dataset.id); run(); } });
+all.addEventListener('change', () => select(all.value));
+document.querySelector('#run').addEventListener('click', run);
+function select(id) {
+  current = id; all.value = id;
+  picks.querySelectorAll('.pick').forEach(b => b.classList.toggle('active', b.dataset.id === id));
+}
+fetch('/api/disputes').then(r => r.json()).then(rows => {
+  all.innerHTML = rows.map(r => `<option value="${esc(r.dispute_id)}">${esc(r.dispute_id)} · ${esc(words(r.reason_category))} · ${esc((r.statement || '(no statement)').slice(0, 40))}</option>`).join('');
+  select(current);
+});
+
+function finding(code) {
+  const [key, detail] = code.split(':');
+  const [tone, title, why] = CODES[key] || ['plain', words(key), ''];
+  return `<li class="tone-${tone === 'plain' ? 'plain' : tone}"><span class="chip tone-${tone}">${esc(key.replace(/_/g, ' '))}</span>
+    <div><b>${esc(title)}</b>${detail ? ` <code>${esc(detail)}</code>` : ''}<div class="note" style="color:inherit;opacity:.85">${esc(why)}</div></div></li>`;
+}
+function out(label, map, value) {
+  const [name, tone, why] = map[value] || [value, 'tone-plain', ''];
+  return `<div class="out ${tone}"><div class="label">${label}</div><div class="value">${esc(name)}</div><div class="why">${esc(why)}</div></div>`;
+}
+
+async function run() {
+  const status = document.querySelector('#status'), result = document.querySelector('#result');
+  status.textContent = 'Running…';
   try {
     const response = await fetch('/api/disputes/run', {method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({dispute_id: document.querySelector('#dispute').value.trim()})});
+      body: JSON.stringify({dispute_id: current, outage: document.querySelector('#outage').checked})});
     const r = await response.json();
     if (!response.ok) throw new Error(r.error || 'Request failed');
     status.textContent = '';
-    const s = r.category_suggestion;
-    out.innerHTML = `
-      <section class="panel"><h2>Proposal for ${esc(r.dispute_id)}</h2>
-        <div class="outputs">
-          <div class="output"><div class="label">Queue</div><div class="value">${esc(r.queue)}</div></div>
-          <div class="output"><div class="label">Reviewer</div><div class="value">${esc(r.reviewer)}</div></div>
-          <div class="output"><div class="label">Readiness</div><div class="value">${esc(r.readiness)}</div></div>
-        </div>
-        ${r.fraud_review_case ? `<p>Fraud review case <code>${esc(r.fraud_review_case)}</code> is open as a draft.</p>` : ''}
+    const i = r.input, s = r.category_suggestion;
+    const findings = [...r.reasons, ...r.flags];
+    const txns = i.transactions.map(t => t.missing
+      ? `<tr><td><code>${esc(t.txn_id)}</code></td><td colspan="3" class="missing">Not in our records</td><td class="num">${money(t.claimed)}</td></tr>`
+      : `<tr><td><code>${esc(t.txn_id)}</code></td><td>${esc(t.merchant_name)}</td><td>${esc((t.posted_at || '').replace('T', ' '))}</td><td class="num">${money(t.amount)}</td><td class="num">${money(t.claimed)}</td></tr>`).join('');
+    result.innerHTML = `
+      <section class="panel">
+        <div class="step"><span class="n">1</span><div><h2>What came in</h2><small>Dispute ${esc(r.dispute_id)}, as the customer filed it</small></div></div>
+        <blockquote>${i.statement ? '“' + esc(i.statement) + '”' : '<span class="missing">No statement given</span>'}</blockquote>
+        <div class="meta"><span>Type: <b>${esc(words(i.reason_category) || '—')}</b></span><span>Received: <b>${esc(i.received_date || '—')}</b></span>
+          <span>Evidence provided: <b>${i.evidence.length ? i.evidence.map(words).map(esc).join(', ') : 'none'}</b></span></div>
+        <table><thead><tr><th>Transaction</th><th>Merchant</th><th>Charged on</th><th style="text-align:right">Charged</th><th style="text-align:right">Customer claims</th></tr></thead><tbody>${txns}</tbody></table>
       </section>
-      <section class="panel"><h2>Reasons</h2>${list(r.reasons)}<h2 style="margin-top:12px">Flags for the analyst</h2>${list(r.flags)}
-        <p class="note">Transactions checked: ${r.checked_txn_ids.map(t => `<code>${esc(t)}</code>`).join(' ')}</p></section>
-      ${s ? `<section class="panel"><h2>Suggested category (model, needs confirmation)</h2><p><code>${esc(s.category)}</code> based on: “${esc(s.quote)}”</p></section>` : ''}
-      <section class="panel"><h2>Case summary (model-drafted)</h2>
-        <p>${r.summary ? esc(r.summary) : '<span class="error">No summary: the model was unavailable.</span>'}</p>
-        <p class="note">Policy: ${r.policy_section ? `<code>${esc(r.policy_section)}</code>` : 'none retrieved'}</p></section>
-      ${r.customer_message_draft ? `<section class="panel"><h2>Customer request (draft, not sent)</h2><pre>${esc(r.customer_message_draft)}</pre>
-        <p class="note">Only an analyst can send this, through the approval gate.</p></section>` : ''}
-      <section class="panel"><h2>Trace</h2><p class="note">${r.trace.map(t => `<code>${esc(t)}</code>`).join(' → ')}</p></section>`;
+
+      <section class="panel">
+        <div class="step"><span class="n">2</span><div><h2>What the assistant did</h2><small>Rules run in code. Blue steps use AI.${i.outage_simulated ? ' Policy search was switched off for this run.' : ''}</small></div></div>
+        <div class="trace">${r.trace.map(t => { const [label, cls] = STEPS[t] || [t, '']; return `<span class="t ${cls}">${esc(label)}</span>`; }).join('<span class="arrow">→</span>')}</div>
+      </section>
+
+      <section class="panel">
+        <div class="step"><span class="n">3</span><div><h2>What it proposes</h2><small>A suggestion for the analyst, with every reason shown</small></div></div>
+        <div class="outputs">${out('Which team', QUEUE, r.queue)}${out('Who reviews', REVIEWER, r.reviewer)}${out('Status', READY, r.readiness)}</div>
+        ${findings.length ? `<ul class="findings">${findings.map(finding).join('')}</ul>` : '<p class="note" style="margin-top:12px">✓ No problems found: the transactions match our records, it\'s within time limits and the evidence is complete.</p>'}
+        ${r.fraud_review_case ? `<p class="note">Draft fraud case <code>${esc(r.fraud_review_case)}</code> opened for the fraud team to review.</p>` : ''}
+      </section>
+
+      <section class="panel">
+        <div class="step"><span class="n">4</span><div><h2>Check it against policy</h2><small>Click any section to read it in the policy manual</small></div></div>
+        ${r.policy_section ? `<div class="cite"><p class="eyebrow">Policy the assistant looked up</p><button class="sec" data-sec="${esc(r.policy_section)}">${esc(r.policy_section)}</button><p>“${esc(r.policy_text)}”</p></div>`
+          : r.readiness === 'LOOKUP_UNAVAILABLE' ? `<div class="cite" style="background:var(--warn-bg);border-color:#f0dcae"><p class="eyebrow">Policy the assistant looked up</p><p>None: the policy search was down, so the case is held. The references below come straight from the manual for you to check.</p></div>` : ''}
+        <table class="checks"><thead><tr><th>Result</th><th>What policy requires</th><th>Section</th><th>This case</th></tr></thead><tbody>
+          ${r.policy_checks.map(c => `<tr><td><span class="status st-${c.status}">${STATUS[c.status]}</span></td><td>${esc(c.requirement)}</td>
+            <td>${c.section ? `<button class="sec" data-sec="${esc(c.section)}">${esc(c.section)}</button>` : ''}</td><td class="note" style="color:var(--ink)">${esc(c.detail)}</td></tr>`).join('')}
+        </tbody></table>
+      </section>
+
+      ${s ? `<section class="panel"><h2>The customer picked "other". The AI suggests: ${esc(words(s.category))}<span class="ai-tag">AI · needs confirmation</span></h2>
+        <p class="note">Based on the customer's words: “${esc(s.quote)}”</p></section>` : ''}
+
+      <section class="panel"><h2>Case summary for the analyst<span class="ai-tag">AI-drafted</span></h2>
+        <p style="margin:0 0 6px">${r.summary ? esc(r.summary) : '<span class="error">No summary: the model was unavailable.</span>'}</p>
+        <p class="note">Policy used: ${r.policy_section ? `<button class="sec" data-sec="${esc(r.policy_section)}">${esc(r.policy_section)}</button>` : 'none'}</p></section>
+
+      ${r.customer_message_draft ? `<section class="panel"><h2>Request to the customer<span class="ai-tag" style="background:var(--warn-bg);color:var(--warn)">Draft · not sent</span></h2><pre>${esc(r.customer_message_draft)}</pre>
+        <p class="note">Only an analyst can send this (<button class="sec" data-sec="DP-6.1">DP-6.1</button>).</p></section>` : ''}
+
+      <div class="decide"><span class="icon">🧑‍⚖️</span><div><b>An analyst makes the call.</b>
+        <p>There is no approve, deny or refund button here, on purpose. The assistant sorts and explains; a person decides.</p></div></div>`;
+    result.scrollIntoView({behavior:'smooth', block:'start'});
   } catch (error) { status.innerHTML = `<span class="error">${esc(error.message)}</span>`; }
-});
+}
 </script>
 </body>
 </html>
