@@ -92,5 +92,28 @@ class HttpWorkflowTests(unittest.TestCase):
         self.assertEqual(address_date['original_value'],'2O26-O8-Ol')
         self.assertFalse(address_date['review_required'])
         self.assertTrue(any(x['id']=='A5:identity.name' for x in doc['evidence']))
+    def test_course_case_edit_is_scoped_audited_and_changes_the_lab_result(self):
+        case_id='SPECIMEN-APP-5154'
+        before=self.get('/api/lab/case/'+case_id)
+        self.assertTrue(before['company']['name'])
+        self.assertTrue(before['parties'])
+        self.assertTrue(before['documents'])
+        original=next(x for x in before['fields'] if x['id']=='proof_of_address_date')['original']
+        run=lambda:self.post('/api/lab/run',{'application_id':case_id})
+        self.assertEqual(run()['status'],'NO_FLAGS')
+        edited=self.post('/api/lab/case/'+case_id+'/edit',{'field':'proof_of_address_date','value':'2020-01-01'})
+        self.assertEqual(edited['audit'][0]['old_value'],original)
+        self.assertEqual(edited['audit'][0]['new_value'],'2020-01-01')
+        item=next(x for x in self.get('/api/lab/directory')['applications'] if x['id']==case_id)
+        self.assertEqual(item['category'],'Needs recheck')
+        result=run()
+        self.assertIn('POA_STALE',result['reasons'])
+        self.assertEqual(result['status'],'FLAGGED')
+        source=lab_bridge.data_layer.get_application_pack(case_id)
+        self.assertEqual(lab_bridge.rules.document(source,'PROOF_OF_ADDRESS')['document_date'],original)
+        self.post('/api/lab/case/'+case_id+'/edit',{'field':'proof_of_address_date','reset':True})
+        self.assertEqual(run()['status'],'NO_FLAGS')
+        with self.assertRaises(HTTPError): self.post('/api/lab/case/'+case_id+'/edit',{'field':'approve','value':'yes'})
+        with self.assertRaises(HTTPError): self.post('/api/lab/case/'+case_id+'/edit',{'field':'application_date','value':'nonsense'})
 
 if __name__=='__main__': unittest.main()

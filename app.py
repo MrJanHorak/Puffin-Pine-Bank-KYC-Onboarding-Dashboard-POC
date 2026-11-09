@@ -7,12 +7,13 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 from dotenv import load_dotenv
-import lab_bridge, gemini_agent, document_bridge, evidence_qa, linked_review, application_directory
+import lab_bridge, gemini_agent, document_bridge, evidence_qa, linked_review, application_directory, course_edits
 from output_checks import check_summary
 
 ROOT = Path(__file__).resolve().parent
 load_dotenv(ROOT / '.env', override=False)
 DB = Path(os.environ.get('ONBOARDING_DB', ROOT / 'demo.sqlite3'))
+RUNTIME_SOURCE_REVISION = None
 SCENARIOS = [
  {'id':'PP-1042','company':'Northstar Design Co.','industry':'Creative services','submitted':'2026-11-03','owner':'Maya Chen','ownership':100,'screening':'clear','risk':'Standard','description':'Complete application ready for analyst review.', 'documents':[
   {'id':'incorporation','name':'Certificate of incorporation','value':'Northstar Design Co. · REG-28471','confidence':98,'state':'verified'}, {'id':'identity','name':'Director identity document','value':'Maya Chen · expires 2029-08-17','confidence':96,'state':'verified'}, {'id':'address','name':'Proof of business address','value':'12 Market Street · dated 2026-10-12','confidence':94,'state':'verified'}]},
@@ -33,14 +34,17 @@ def connect():
         db.close()
 
 def init_db():
+    global RUNTIME_SOURCE_REVISION
     DB.parent.mkdir(parents=True, exist_ok=True)
     with connect() as db:
         db.executescript('CREATE TABLE IF NOT EXISTS cases (id TEXT PRIMARY KEY, data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, case_id TEXT NOT NULL, time TEXT NOT NULL, message TEXT NOT NULL);')
         linked_review.init(db)
         application_directory.init(db)
+        course_edits.init(db)
         for item in SCENARIOS:
             data = copy.deepcopy(item); data.update(screened=False, review_case=False, drafted=False)
             db.execute('INSERT OR IGNORE INTO cases VALUES (?,?)', (item['id'], json.dumps(data)))
+    RUNTIME_SOURCE_REVISION = application_directory.source_revision()
 
 def status(case):
     if case['screened'] and case['screening'] == 'potential_match': return 'Compliance review'
@@ -135,6 +139,13 @@ class Handler(BaseHTTPRequestHandler):
             state=linked_state()
             with connect() as db:
                 return self.respond(200, application_directory.directory(db,lab_bridge.data_layer,linked_review.CASE_ID,state))
+        if path.startswith('/api/lab/case/'):
+            application_id=path.rsplit('/',1)[-1]
+            if application_id == linked_review.CASE_ID:
+                return self.respond(200, {'application_id':application_id,'linked':True,'document_case':'CASE-A'})
+            try:
+                with connect() as db: return self.respond(200, course_edits.snapshot(db,lab_bridge.data_layer,application_id))
+            except ValueError as exc: return self.respond(404, {'error':str(exc)})
         if path.startswith('/api/documents/'):
             case_id = path.rsplit('/',1)[-1]
             try:
@@ -170,6 +181,15 @@ class Handler(BaseHTTPRequestHandler):
         self.respond(404, {'error':'Not found'})
     def do_POST(self):
         parts = urlparse(self.path).path.strip('/').split('/')
+        if len(parts)==5 and parts[:3]==['api','lab','case'] and parts[4]=='edit':
+            try:
+                length=int(self.headers.get('Content-Length','0'))
+                if length>4096: raise ValueError('Request too large')
+                payload=json.loads(self.rfile.read(length) or b'{}')
+                with connect() as db:
+                    result=course_edits.change(db,lab_bridge.data_layer,parts[3],payload.get('field',''),payload.get('value',''),payload.get('reset',False))
+                return self.respond(200,result)
+            except (ValueError,json.JSONDecodeError) as exc: return self.respond(400,{'error':str(exc)})
         if parts == ['api','linked','5201','review']:
             try:
                 length = int(self.headers.get('Content-Length','0'))
@@ -203,11 +223,22 @@ class Handler(BaseHTTPRequestHandler):
                     return self.respond(200, lab_bridge.record_review(payload.get('application_id',''), payload.get('review_id',''), payload.get('action',''), payload.get('rationale','')))
                 application_id = payload.get('application_id','')
                 state = linked_state() if application_id == linked_review.CASE_ID else None
+                overrides = None
+                if state is None:
+                    with connect() as db:
+                        db.execute('BEGIN')  # Read edits and their revision from one snapshot.
+                        case = course_edits.snapshot(db,lab_bridge.data_layer,application_id)
+                        if case['stale_fields']: raise ValueError('A source record changed; review or revert stale edits before rerunning checks.')
+                        overrides=case['overrides'] or None
+                        case_revision=course_edits.revisions(db).get(application_id,'')
+                else: case_revision=application_directory.linked_revision(state)
                 # Capture the inputs before the run. A changed source or reviewed
                 # document state makes this snapshot stale in the directory.
                 source_rev = application_directory.source_revision()
-                assessment = lab_bridge.run_course_case(application_id, state)
-                with connect() as db: application_directory.save_run(db,assessment,source_rev,state)
+                if RUNTIME_SOURCE_REVISION != source_rev: raise ValueError('Case source files changed while the server was running. Restart the app before running checks.')
+                assessment = lab_bridge.run_course_case(application_id, state, overrides)
+                if application_directory.source_revision() != source_rev: raise ValueError('Case source files changed during the check. Restart the app and rerun.')
+                with connect() as db: application_directory.save_run(db,assessment,source_rev,case_revision)
                 return self.respond(200, gemini_agent.run_agent(assessment) if parts[-1] == 'agent' else assessment)
             except (ValueError, json.JSONDecodeError) as exc: return self.respond(400, {'error':str(exc)})
         if len(parts) != 4 or parts[:2] != ['api','cases']: return self.respond(404, {'error':'Not found'})

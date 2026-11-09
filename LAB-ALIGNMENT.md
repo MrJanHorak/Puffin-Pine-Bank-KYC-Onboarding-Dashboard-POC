@@ -6,7 +6,7 @@ This is a teaching POC with fictional data. A copied module is listed as integra
 | --- | --- | --- | --- |
 | 1 | Scope, source-of-truth and data readiness | The course CSV data layer supplies the 200 original cases; one explicitly separate example is assembled from synthetic documents. | No measured bank process baseline or validated real data access. |
 | 2 | Specification, review and eval habits | README, small automated tests, checked-in reference cases. | This does not reproduce the lesson's full engineering workflow. |
-| 3 | PRD, rules and cost | The course `kyc.rules` evaluates the lab case pack; missing data holds the case. | Token/cost tracking and the original full PRD acceptance suite are not integrated. |
+| 3 | PRD, rules and cost | The course `kyc.rules` evaluates the lab case pack; missing data holds the case. The 200 original records support the data layer's four exercise overrides, with local audit and recheck. | Token/cost tracking and the original full PRD acceptance suite are not integrated. |
 | 4 | Context and retrieval | The course `policy_search` client queries the configured Azure index; retrieved sections feed a read-only Gemini tool. | Fixed training query; relevance and model claims need human validation. |
 | 5 | Tool contracts and safe writes | The course screening and review-case tools run in code; the agent has bounded read-only tools. Reviewer actions use a separate scoped adapter. | The original full tool/MCP suite and multi-process/production controls are not integrated. |
 | 6 | Autonomy and POC floor | Analyst workspace displays status, reasons, screening and sources; the model cannot execute a decision action. | The full original floor validator and `routing.run_case` agent/replay path are not invoked. |

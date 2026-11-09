@@ -2,6 +2,7 @@
 import hashlib, json
 from datetime import datetime, timezone
 from pathlib import Path
+import course_edits
 
 ROOT = Path(__file__).resolve().parent
 CATEGORIES = ('Not checked','Needs recheck','Needs information','Screening unavailable',
@@ -18,7 +19,7 @@ def source_revision():
     """Detect changes to the local rule engine and included synthetic case sources."""
     files = [ROOT/'lab/fixtures/data'/name for name in ('applications.csv','parties.csv','documents.csv','jurisdictions.csv','watchlist.csv')]
     files += [ROOT/'lab/starter-code/kyc'/name for name in ('data_layer.py','rules.py','screening.py','routing.py','tools.py','circuit_breaker.py')]
-    files += [ROOT/'lab/starter-code/config/rules.yaml',ROOT/'app.py',ROOT/'lab_bridge.py',ROOT/'linked_case.py',ROOT/'document_bridge.py',ROOT/'linked_review.py',ROOT/'document_lab/starter-code/schema/kyc_extraction_schema.yaml']
+    files += [ROOT/'lab/starter-code/config/rules.yaml',ROOT/'app.py',ROOT/'lab_bridge.py',ROOT/'linked_case.py',ROOT/'course_edits.py',ROOT/'document_bridge.py',ROOT/'linked_review.py',ROOT/'document_lab/starter-code/schema/kyc_extraction_schema.yaml']
     files += [ROOT/'document_lab/starter-code/kit'/name for name in ('common.py','extract.py','review.py')]
     files += sorted(p for p in (ROOT/'document_lab/fixtures/documents').iterdir() if p.is_file())
     h=hashlib.sha256()
@@ -31,14 +32,14 @@ def linked_revision(state):
     relevant={'corrections':state.get('corrections',{}),'supplement':state.get('supplement')}
     return hashlib.sha256(json.dumps(relevant,sort_keys=True).encode('utf-8')).hexdigest()
 
-def save_run(db, result, source_rev, linked_state=None):
+def save_run(db, result, source_rev, case_revision=''):
     db.execute('''INSERT OR REPLACE INTO lab_runs(application_id,checked_at,status,reasons,source_revision,linked_revision)
       VALUES (?,?,?,?,?,?)''', (result['application_id'], datetime.now(timezone.utc).isoformat(timespec='seconds'),
-      result['status'],json.dumps(result['reasons']),source_rev,linked_revision(linked_state)))
+      result['status'],json.dumps(result['reasons']),source_rev,case_revision))
 
 def directory(db, data_layer, linked_id, linked_state):
     runs={row['application_id']:dict(row) for row in db.execute('SELECT * FROM lab_runs')}
-    rev=source_revision(); tables=data_layer.tables(); items=[]
+    rev=source_revision(); tables=data_layer.tables(); items=[]; edits=course_edits.revisions(db)
     for app_id, app in tables['applications'].items():
         company=data_layer.company_of(app_id)
         items.append({'id':app_id,'company':company.get('full_name') or 'Unknown company', 'submitted':app['application_date']})
@@ -46,7 +47,7 @@ def directory(db, data_layer, linked_id, linked_state):
     for item in items:
         run=runs.get(item['id'])
         if not run: item.update(category='Not checked',checked_at=None,reasons=[],last_status=None)
-        elif run['source_revision'] != rev or (item['id']==linked_id and run['linked_revision'] != linked_revision(linked_state)):
+        elif run['source_revision'] != rev or run['linked_revision'] != (linked_revision(linked_state) if item['id']==linked_id else edits.get(item['id'],'')):
             item.update(category='Needs recheck',checked_at=run['checked_at'],reasons=json.loads(run['reasons']),last_status=run['status'])
         else:
             item.update(category=STATUS_TO_CATEGORY.get(run['status'],'Needs recheck'),checked_at=run['checked_at'],reasons=json.loads(run['reasons']),last_status=run['status'])

@@ -30,13 +30,13 @@ def ownership_evidence(pack):
                            'company_id':pack['company']['party_id']})
     return chains
 
-def run_course_case(application_id, review_state=None):
+def run_course_case(application_id, review_state=None, fields=None):
     if not isinstance(application_id, str) or not re.fullmatch(r'SPECIMEN-APP-\d{4}', application_id):
         raise ValueError('Use an application ID such as SPECIMEN-APP-5154.')
     linked = application_id == linked_case.APPLICATION_ID
-    pack, extracted = linked_case.build_pack(review_state) if linked else (data_layer.get_application_pack(application_id), None)
+    pack, extracted = linked_case.build_pack(review_state) if linked else (data_layer.get_application_pack(application_id, fields), None)
     if pack is None: raise ValueError('Application not found.')
-    application = {'parties':[{'party_id':p['party_id']} for p in rules.parties_to_screen(pack)]} if linked else tools.get_application(application_id)
+    application = {'parties':[{'party_id':p['party_id']} for p in rules.parties_to_screen(pack)]} if linked else tools.get_application(application_id, fields)
     trace = [{'kind':'tool','name':'get_application','ok':True,'party_ids':[p['party_id'] for p in application['parties']]}]
     screenings = routing.screen_every_party(pack, tools.FaultPlan(), trace)
     status, reasons = rules.check_application(pack, screenings)
