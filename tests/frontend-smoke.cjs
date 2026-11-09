@@ -18,6 +18,7 @@ async function fetch(url) {
   return {ok:true, async json(){return data;}};
 }
 const context = vm.createContext({document,fetch,console,alert(){},encodeURIComponent});
+vm.runInContext(fs.readFileSync('markdown.js','utf8'),context);
 vm.runInContext(fs.readFileSync('app.js','utf8'),context);
 (async()=>{
   const button=el('#load-docs'); const event={currentTarget:button};

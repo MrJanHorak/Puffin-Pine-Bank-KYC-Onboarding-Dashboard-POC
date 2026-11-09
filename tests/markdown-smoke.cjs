@@ -1,0 +1,11 @@
+const assert = require('node:assert/strict');
+const {renderMarkdown} = require('../markdown.js');
+const formatted=renderMarkdown('# Policy\n\nA **strong** statement.\n\n- first\n- second');
+assert.match(formatted,/<h3>Policy<\/h3>/);
+assert.match(formatted,/<strong>strong<\/strong>/);
+assert.match(formatted,/<ul><li>first<\/li><li>second<\/li><\/ul>/);
+const unsafe=renderMarkdown('<img src=x onerror=alert(1)>\n[click](javascript:alert(1))\n<script>alert(1)</script>');
+assert.doesNotMatch(unsafe,/<img|<script|<a\s/i);
+assert.match(unsafe,/&lt;script&gt;/);
+assert.match(renderMarkdown('```\n<script>\n```'),/<pre><code>&lt;script&gt;<\/code><\/pre>/);
+console.log('Markdown rendering checks passed');

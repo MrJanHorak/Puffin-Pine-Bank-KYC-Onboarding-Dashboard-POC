@@ -19,6 +19,10 @@ class CourseIntegrationTests(unittest.TestCase):
         self.assertEqual(len(result['review_cases']),2)
         self.assertEqual(result['review_cases'],lab_bridge.run_course_case('SPECIMEN-APP-5155')['review_cases'])
         self.assertTrue(result['recommendation_held'])
+    def test_complex_ownership_shows_actual_intermediaries(self):
+        result=lab_bridge.run_course_case('SPECIMEN-APP-5150')
+        self.assertIn('COMPLEX_OWNERSHIP',result['reasons'])
+        self.assertEqual(result['ownership_chains'],[{'owner_id':'SPECIMEN-PTY-5578','intermediate_ids':['SPECIMEN-PTY-8002','SPECIMEN-PTY-8001'],'company_id':'SPECIMEN-PTY-5576'}])
     def test_missing_data_and_policy_failure_hold(self):
         result = lab_bridge.run_course_case('SPECIMEN-APP-5192')
         self.assertEqual(result['status'],'MISSING_DATA')

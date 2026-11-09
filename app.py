@@ -135,7 +135,7 @@ class Handler(BaseHTTPRequestHandler):
         if path in ('/branding/mark.svg', '/branding/logo-light.svg', '/branding/logo-dark.svg', '/branding/puffin-pine-concept.png'):
             kind = 'image/png' if path.endswith('.png') else 'image/svg+xml; charset=utf-8'
             return self.respond(200, (ROOT / path.lstrip('/')).read_bytes(), kind)
-        if path in ('/', '/index.html', '/app.js', '/style.css'):
+        if path in ('/', '/index.html', '/app.js', '/markdown.js', '/style.css'):
             file = ROOT / ('index.html' if path == '/' else path[1:]); kind = {'.html':'text/html', '.js':'text/javascript', '.css':'text/css'}[file.suffix]
             return self.respond(200, file.read_bytes(), kind + '; charset=utf-8')
         with connect() as db:

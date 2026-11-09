@@ -11,6 +11,25 @@ from kyc import data_layer, rules, tools, routing, policy_search
 _review_lock = threading.Lock()
 REVIEW_STORE = ROOT / 'state' / 'lab-review-cases.json'
 
+def ownership_evidence(pack):
+    """Identify intermediary chains without exposing names or inventing links."""
+    by_id = {p['party_id']:p for p in pack['parties']}
+    chains = []
+    for person in rules.people(pack):
+        if 'OWNER' not in person.get('role','') or not person.get('ownership_pct'):
+            continue
+        via, seen, intermediaries = person.get('owned_via_party_id'), {person['party_id']}, []
+        while via and via not in seen:
+            seen.add(via)
+            owner = by_id.get(via)
+            if not owner: break
+            intermediaries.append(owner['party_id'])
+            via = owner.get('owned_via_party_id')
+        if len(intermediaries) >= 2 and not via:
+            chains.append({'owner_id':person['party_id'], 'intermediate_ids':intermediaries,
+                           'company_id':pack['company']['party_id']})
+    return chains
+
 def run_course_case(application_id):
     if not isinstance(application_id, str) or not re.fullmatch(r'SPECIMEN-APP-\d{4}', application_id):
         raise ValueError('Use an application ID such as SPECIMEN-APP-5154.')
@@ -52,6 +71,7 @@ def run_course_case(application_id):
             'linked_document_case': linked_case.DOCUMENT_CASE if linked else None,
             'document_review_items': extracted['review_items'] if linked else [],
             'case_notes': ['Synthetic application date: 2026-08-15.', 'Director list and PEP declarations have not been provided.', 'Fields below the extraction review threshold are not accepted as verified KYC data.'] if linked else [],
+            'ownership_chains': ownership_evidence(pack) if 'COMPLEX_OWNERSHIP' in reasons else [],
             'note':'Synthetic course rules and watchlist. A person reviews and decides.'}
 
 def retrieve_policy(jurisdiction):

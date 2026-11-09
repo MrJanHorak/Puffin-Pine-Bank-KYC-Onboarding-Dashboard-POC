@@ -21,6 +21,8 @@ class HttpWorkflowTests(unittest.TestCase):
         request=Request(self.base+path,data=json.dumps(body).encode(),headers={'Content-Type':'application/json'},method='POST')
         with urlopen(request) as response: return json.load(response)
     def test_document_and_review_workflow(self):
+        with urlopen(self.base+'/markdown.js') as response:
+            self.assertIn('text/javascript',response.headers['Content-Type'])
         ids=self.get('/api/lab/applications')['application_ids']
         self.assertEqual(len(ids),201)
         self.assertIn('SPECIMEN-APP-5200',ids)
