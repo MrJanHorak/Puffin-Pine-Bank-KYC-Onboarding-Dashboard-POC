@@ -96,6 +96,15 @@ class HttpWorkflowTests(unittest.TestCase):
         self.post('/api/lab/run',{'application_id':'SPECIMEN-APP-5155'})
         flagged=next(x for x in self.get('/api/lab/directory')['applications'] if x['id']=='SPECIMEN-APP-5155')
         with self.assertRaises(HTTPError): self.post('/api/lab/case-review',{'application_id':flagged['id'],'checked_at':flagged['checked_at'],'notes':'No flags'})
+    def test_policy_question_uses_question_and_reports_sources_when_held(self):
+        section={'section_id':'SPECIMEN-POL-0308','version':'1','title':'Proof of address','effective_date':'2024-09-01','content':'No more than 90 days before the application date.'}
+        with patch('app.lab_bridge.policy_for_case',return_value={'outcome':'ok','sections':[section]}) as search, patch('app.evidence_qa.answer_question',return_value={'mode':'held','text':'Insufficient evidence.'}):
+            answer=self.post('/api/questions/policy',{'application_id':'SPECIMEN-APP-5154','question':'How often do we check the address again?'})
+        search.assert_called_once_with('SPECIMEN-APP-5154','How often do we check the address again?')
+        self.assertEqual(answer['mode'],'held')
+        self.assertEqual(answer['retrieval']['sources'][0]['id'],'SPECIMEN-POL-0308')
+        self.assertEqual(answer['retrieval']['sources'][0]['text'],section['content'])
+        with self.assertRaises(HTTPError): self.post('/api/questions/policy',{'application_id':'SPECIMEN-APP-5154','question':''})
     def test_linked_case_can_be_reviewed_and_rerun(self):
         run=lambda:self.post('/api/lab/run',{'application_id':'SPECIMEN-APP-5201'})
         initial=run()

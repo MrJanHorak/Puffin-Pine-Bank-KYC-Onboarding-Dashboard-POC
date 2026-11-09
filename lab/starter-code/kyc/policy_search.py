@@ -34,7 +34,7 @@ def search_config():
                          "AZURE_SEARCH_QUERY_KEY")}
 
 
-def search_policy(jurisdiction: str, as_of: str) -> list[dict]:
+def search_policy(jurisdiction: str, as_of: str, question: str | None = None) -> list[dict]:
     """Return the relevant current policy sections, or raise PolicyUnavailable."""
     conf = search_config()
     endpoint = conf["AZURE_SEARCH_ENDPOINT"].rstrip("/")
@@ -61,7 +61,18 @@ def search_policy(jurisdiction: str, as_of: str) -> list[dict]:
     filter_value = ("search.in(entity_type, 'COMPANY,ALL') and "
                     f"search.in(jurisdiction, '{jurisdiction},ALL') and "
                     f"effective_date le {review_date}T00:00:00Z and status eq 'CURRENT'")
-    body = {"search": "high-risk jurisdiction company due diligence", "top": 3,
+    # Preserve the lab's default query for case checks. Policy Q&A uses the
+    # analyst's question as plain search terms, not Azure query operators.
+    if question is not None:
+        if not isinstance(question, str) or not question.strip() or len(question) > 800:
+            raise PolicyUnavailable("Policy question is missing or invalid.")
+        terms = re.findall(r"[A-Za-z0-9]+", question)[:40]
+        if not terms:
+            raise PolicyUnavailable("Policy question has no searchable terms.")
+        search_text = " ".join(terms)
+    else:
+        search_text = "high-risk jurisdiction company due diligence"
+    body = {"search": search_text, "top": 5 if question is not None else 3,
             "select": "section_id,version,title,effective_date,content",
             "filter": filter_value}
     url = f"{endpoint}/indexes/{quote(index, safe='')}/docs/search?api-version=2024-07-01"

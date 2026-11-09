@@ -244,9 +244,14 @@ class Handler(BaseHTTPRequestHandler):
                     if data['case_id'] == 'CASE-A': data = document_bridge.apply_linked_reviews(data, linked_state())
                     sources = [{'id':x['id'],'text':x['value'],'description':x['document']+'; '+x['source']+'; confidence '+str(x['confidence']),'review_required':x['review_required']} for x in data['evidence']]
                 else:
-                    policy = lab_bridge.policy_for_case(payload.get('application_id',''))
+                    question=payload.get('question','')
+                    if not isinstance(question,str) or not question.strip() or len(question)>800: raise ValueError('Enter a question of 1 to 800 characters.')
+                    policy = lab_bridge.policy_for_case(payload.get('application_id',''), question)
                     sources = [{'id':x['section_id'],'text':x['content'],'description':x['title']+' v'+x['version']} for x in policy['sections']]
-                return self.respond(200, evidence_qa.answer_question(payload.get('question',''), sources))
+                answer=evidence_qa.answer_question(payload.get('question',''), sources)
+                if parts[-1]=='policy':
+                    answer['retrieval']={'outcome':policy['outcome'],'sources':[{'id':x['id'],'description':x['description'],'text':x['text']} for x in sources]}
+                return self.respond(200, answer)
             except (ValueError, json.JSONDecodeError) as exc: return self.respond(400, {'error':str(exc)})
         if parts in (['api','lab','run'], ['api','lab','agent'], ['api','lab','review']):
             try:

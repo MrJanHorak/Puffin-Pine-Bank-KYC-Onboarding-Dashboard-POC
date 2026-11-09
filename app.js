@@ -53,7 +53,8 @@ async function loadDirectory(){
 }
 function renderAnswer(result){
  const heading=result.mode==='gemini'?'Gemini · '+esc(result.model):result.mode==='unavailable'?'Assistant unavailable':'Answer held';
- return `<div class="insight"><span class="spark">✳</span><div><strong>${heading}</strong><div class="markdown">${renderMarkdown(result.text)}</div>${result.citations?result.citations.map(c=>`<p><strong>${esc(c.source_id)}</strong> · ${esc(c.description)}${c.review_required?' · requires review':''}<br>“${esc(c.quote)}”</p>`).join(''):''}<p>Verify source relevance and the answer before using it.</p></div></div>`;
+ const retrieval=result.retrieval?`<details class="answer-sources"><summary>Policy sources retrieved (${result.retrieval.sources.length})</summary><p>Search: ${esc(label(result.retrieval.outcome))}</p>${result.retrieval.sources.map(s=>`<details class="policy-item"><summary>${esc(s.id)} · ${esc(s.description)}</summary><div class="markdown">${renderMarkdown(s.text||'')}</div></details>`).join('')||'<p>No policy sources returned.</p>'}<p>Search results can include unrelated sections; inspect the cited policy before relying on an answer.</p></details>`:'';
+ return `<div class="insight"><span class="spark">✳</span><div><strong>${heading}</strong><div class="markdown">${renderMarkdown(result.text)}</div>${result.citations?result.citations.map(c=>`<p><strong>${esc(c.source_id)}</strong> · ${esc(c.description)}${c.review_required?' · requires review':''}<br>“${esc(c.quote)}”</p>`).join(''):''}${retrieval}<p>Verify source relevance and the answer before using it.</p></div></div>`;
 }
 function renderFields(detail){
  if(!detail.fields?.length)return '';

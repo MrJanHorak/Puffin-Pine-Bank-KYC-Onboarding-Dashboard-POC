@@ -86,13 +86,14 @@ def run_course_case(application_id, review_state=None, fields=None):
             'ownership_chains': ownership_evidence(pack) if 'COMPLEX_OWNERSHIP' in reasons else [],
             'note':'Synthetic records and watchlist. A person reviews and decides.'}
 
-def retrieve_policy(jurisdiction):
+def retrieve_policy(jurisdiction, question=None):
     mode = os.environ.get('KYC_POLICY_SEARCH', 'off').lower()
     if mode == 'off':
         policy = {'mode':'off', 'outcome':'not_configured', 'sections':[]}
     elif mode == 'azure':
         try:
-            sections = policy_search.search_policy(jurisdiction, os.environ.get('KYC_POLICY_AS_OF_DATE','2026-11-05'))
+            as_of = os.environ.get('KYC_POLICY_AS_OF_DATE','2026-11-05')
+            sections = policy_search.search_policy(jurisdiction, as_of, question=question) if question is not None else policy_search.search_policy(jurisdiction, as_of)
             if not sections: raise policy_search.PolicyUnavailable('No applicable sections returned.')
             policy = {'mode':'azure','outcome':'ok','sections':sections}
         except policy_search.PolicyUnavailable:
@@ -101,11 +102,11 @@ def retrieve_policy(jurisdiction):
         policy = {'mode':mode,'outcome':'unavailable','sections':[]}
     return policy
 
-def policy_for_case(application_id):
+def policy_for_case(application_id, question=None):
     if not isinstance(application_id, str) or not re.fullmatch(r'SPECIMEN-APP-\d{4}', application_id): raise ValueError('Use an application ID such as SPECIMEN-APP-5154.')
     pack = linked_case.build_pack()[0] if application_id == linked_case.APPLICATION_ID else data_layer.get_application_pack(application_id)
     if pack is None: raise ValueError('Application not found.')
-    return retrieve_policy(pack['company']['country_code'])
+    return retrieve_policy(pack['company']['country_code'], question)
 
 def record_review(application_id, review_id, action, rationale=''):
     if action not in ('acknowledged','escalated','reviewed_for_analyst'):

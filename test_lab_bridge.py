@@ -42,6 +42,24 @@ class CourseIntegrationTests(unittest.TestCase):
         self.assertEqual(result['policy']['sections'],[section])
         self.assertEqual(result['policy']['outcome'],'ok')
         search.assert_called_once()
+    def test_policy_question_search_uses_question_and_same_filters(self):
+        client=lab_bridge.policy_search
+        config={'AZURE_SEARCH_ENDPOINT':'https://example.search.windows.net','AZURE_SEARCH_INDEX':'kyc-index','AZURE_SEARCH_QUERY_KEY':'test-key'}
+        requests=[]
+        class Response(io.BytesIO):
+            def __enter__(self): return self
+            def __exit__(self,*args): self.close()
+        def fake(request,timeout):
+            requests.append(json.loads(request.data))
+            return Response(json.dumps({'value':[]}).encode())
+        with patch.object(client,'search_config',return_value=config), patch.object(client,'urlopen',side_effect=fake):
+            client.search_policy('XA','2026-11-05')
+            client.search_policy('XA','2026-11-05',question='How old may proof of address be?')
+        self.assertEqual(requests[0]['search'],'high-risk jurisdiction company due diligence')
+        self.assertEqual(requests[1]['search'],'How old may proof of address be')
+        self.assertEqual(requests[1]['top'],5)
+        self.assertEqual(requests[0]['filter'],requests[1]['filter'])
+        self.assertIn('status eq',requests[1]['filter'])
     def test_agent_returns_model_tool_parts_and_requires_both_tools(self):
         assessment = lab_bridge.run_course_case('SPECIMEN-APP-5154')
         replies = [
