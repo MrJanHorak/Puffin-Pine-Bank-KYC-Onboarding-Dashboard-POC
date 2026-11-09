@@ -9,7 +9,7 @@ const document={querySelector:el,getElementById:id=>el('#'+id),addEventListener(
 const directory={applications:[{id:'SPECIMEN-APP-5154',company:'SPECIMEN Example Ltd',submitted:'2026-01-01',category:'Not checked',checked_at:null},{id:'SPECIMEN-APP-5201',company:'Halden Logistics Ltd',submitted:'2026-08-15',category:'Not checked',checked_at:null}],counts:{'All applications':2,'Not checked':2,'Needs information':0,'Flagged for analyst':0,'Compliance review':0}};
 const detail={application_id:'SPECIMEN-APP-5154',company:{name:'SPECIMEN Example Ltd',registration_number:'REG-1',jurisdiction:'XA',risk_tier:'LOW'},parties:[{id:'SPECIMEN-PTY-1',role:'DIRECTOR',name:'SPECIMEN Person'}],documents:[],fields:[{id:'application_date',label:'Application date',value:'2026-01-01',original:'2026-01-01',available:true}],audit:[]};
 const linked={application_id:'SPECIMEN-APP-5201',linked:true,company:{name:'Halden Logistics Ltd',registration_number:'HL-482913',jurisdiction:'XB',risk_tier:'LOW'},parties:[],documents:[{id:'DOC-1',type:'PROOF_OF_ADDRESS',party_id:'PTY-1',source:'A4.png'}],fields:[],audit:[]};
-const assessment={application_id:'SPECIMEN-APP-5154',status:'NO_FLAGS',status_text:'Test',reasons:[],screenings:[],review_cases:[],policy:{outcome:'not_configured',sections:[]},ownership_chains:[]};
+const assessment={application_id:'SPECIMEN-APP-5154',status:'NO_FLAGS',status_text:'Test',reasons:[],screenings:[{party_id:'SPECIMEN-PTY-1',outcome:'NO_MATCH',list_version:'GDL-2026.06'}],review_cases:[],policy:{outcome:'not_configured',sections:[]},ownership_chains:[],trace:[{name:'get_application',ok:true},{name:'screen_watchlist',party_id:'SPECIMEN-PTY-1',ok:true}]};
 async function fetch(url,options={}){
  let data;
  if(url==='/api/lab/directory')data=directory;
@@ -38,6 +38,10 @@ const wait=()=>new Promise(resolve=>setImmediate(resolve));
  const button={dataset:{action:'run-checks'},disabled:false,textContent:''};
  await handlers.get('document:click')({target:{closest(query){return query.startsWith('[data-action]')?button:null}}});
  assert.match(el('#detail').innerHTML,/No rule flags were raised/);
+ assert.match(el('#detail').innerHTML,/Check results · No Flags/);
+ assert.match(el('#detail').innerHTML,/GDL-2026.06/);
+ assert.match(el('#detail').innerHTML,/Show recorded tool steps/);
+ assert.ok(el('#detail').innerHTML.indexOf('Check results ·')<el('#detail').innerHTML.indexOf('Generate case summary'));
  assert.match(el('#detail').innerHTML,/Policy sources/);
  assert.match(el('#detail').innerHTML,/Mark checks reviewed/);
  el('#case-review-notes').value='Screening reviewed';
