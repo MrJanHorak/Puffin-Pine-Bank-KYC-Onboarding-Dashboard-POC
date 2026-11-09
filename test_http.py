@@ -75,6 +75,27 @@ class HttpWorkflowTests(unittest.TestCase):
         self.assertEqual(directory['counts']['Needs information'],0)
         self.post('/api/lab/run',{'application_id':'SPECIMEN-APP-5201'})
         self.assertEqual(self.get('/api/lab/directory')['counts']['Needs information'],1)
+    def test_no_flags_analyst_review_tracks_current_run(self):
+        case_id='SPECIMEN-APP-5154'
+        item=lambda:next(x for x in self.get('/api/lab/directory')['applications'] if x['id']==case_id)
+        review=lambda checked,notes:self.post('/api/lab/case-review',{'application_id':case_id,'checked_at':checked,'notes':notes})
+        with self.assertRaises(HTTPError): review('', 'Reviewed')
+        self.assertEqual(self.post('/api/lab/run',{'application_id':case_id})['status'],'NO_FLAGS')
+        checked=item()['checked_at']
+        with self.assertRaises(HTTPError): review(checked,'  ')
+        review(checked,'Screening and case details reviewed.')
+        self.assertTrue(item()['review']['current'])
+        self.assertTrue(any('Analyst review recorded' in e['message'] for e in self.get('/api/operations')['events']))
+        self.post('/api/lab/run',{'application_id':case_id})
+        self.assertFalse(item()['review']['current'])
+        with self.assertRaises(HTTPError): review(checked,'Outdated')
+        review(item()['checked_at'],'Reviewed the new results.')
+        self.post('/api/lab/case/'+case_id+'/edit',{'field':'application_date','value':'2026-02-01'})
+        self.assertFalse(item()['review']['current'])
+        with self.assertRaises(HTTPError): review(item()['checked_at'],'Changed case')
+        self.post('/api/lab/run',{'application_id':'SPECIMEN-APP-5155'})
+        flagged=next(x for x in self.get('/api/lab/directory')['applications'] if x['id']=='SPECIMEN-APP-5155')
+        with self.assertRaises(HTTPError): self.post('/api/lab/case-review',{'application_id':flagged['id'],'checked_at':flagged['checked_at'],'notes':'No flags'})
     def test_linked_case_can_be_reviewed_and_rerun(self):
         run=lambda:self.post('/api/lab/run',{'application_id':'SPECIMEN-APP-5201'})
         initial=run()

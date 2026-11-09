@@ -180,6 +180,7 @@ class Handler(BaseHTTPRequestHandler):
             if path == '/api/operations':
                 events = [{'case_id':r['application_id'],'time':r['checked_at'],'message':'Checks completed: '+r['status']} for r in db.execute('SELECT application_id,checked_at,status FROM lab_runs')]
                 events += [{'case_id':r['application_id'],'time':r['time'],'message':'Case field '+r['field']+' '+r['action']} for r in db.execute('SELECT application_id,time,field,action FROM course_edit_audit')]
+                events += [{'case_id':r['application_id'],'time':r['time'],'message':'Analyst review recorded: '+r['notes']} for r in db.execute('SELECT application_id,time,notes FROM case_reviews')]
                 events += [{'case_id':linked_review.CASE_ID,'time':r['time'],'message':'Document review: '+r['field_id']+' '+r['action']} for r in db.execute('SELECT time,field_id,action FROM linked_audit')]
                 reviews = lab_bridge.list_review_cases()
                 for row in reviews:
@@ -193,6 +194,27 @@ class Handler(BaseHTTPRequestHandler):
         self.respond(404, {'error':'Not found'})
     def do_POST(self):
         parts = urlparse(self.path).path.strip('/').split('/')
+        if parts == ['api','lab','case-review']:
+            try:
+                length=int(self.headers.get('Content-Length','0'))
+                if length>4096: raise ValueError('Request too large')
+                payload=json.loads(self.rfile.read(length) or b'{}')
+                application_id=payload.get('application_id','')
+                notes=payload.get('notes','')
+                if not isinstance(notes,str) or not notes.strip() or len(notes)>500: raise ValueError('Enter review notes of up to 500 characters.')
+                extracted=document_bridge.extract_case('CASE-A')
+                with connect() as db:
+                    db.execute('BEGIN IMMEDIATE')
+                    state=linked_review.snapshot(db,extracted)
+                    if RUNTIME_SOURCE_REVISION != application_directory.source_revision(): raise ValueError('Case source files changed. Restart the app and run checks again.')
+                    directory=application_directory.directory(db,lab_bridge.data_layer,linked_review.CASE_ID,state)
+                    item=next ( (x for x in directory['applications'] if x['id']==application_id), None)
+                    if not item or item['category']!='No rule flags' or item['checked_at']!=payload.get('checked_at'):
+                        raise ValueError('The check is no longer current or has flags. Run checks and review the current results.')
+                    db.execute('INSERT INTO case_reviews(application_id,checked_at,time,notes) VALUES (?,?,?,?)',
+                        (application_id,item['checked_at'],datetime.now(timezone.utc).isoformat(timespec='microseconds'),notes.strip()))
+                return self.respond(200,{'message':'Review recorded.'})
+            except (ValueError, json.JSONDecodeError) as exc: return self.respond(400,{'error':str(exc)})
         if len(parts)==5 and parts[:3]==['api','lab','case'] and parts[4]=='edit':
             try:
                 length=int(self.headers.get('Content-Length','0'))

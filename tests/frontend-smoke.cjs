@@ -20,6 +20,7 @@ async function fetch(url,options={}){
  else if(url==='/api/documents/CASE-A')data={evidence:[{id:'A4:name',field:'name',value:'Halden',confidence:.57,document:'A4.png',review_required:true}],review_items:[{field:'name'}]};
  else if(url==='/api/linked/5201')data={corrections:{},supplement:'not_attached',audit:[]};
  else if(url==='/api/lab/run'){directory.applications[0].category='No rule flags';directory.applications[0].checked_at='2026-11-01T00:00:00Z';directory.counts['Not checked']=1;directory.counts['No rule flags']=1;data=assessment}
+ else if(url==='/api/lab/case-review'){const review=JSON.parse(options.body);assert.equal(review.checked_at,directory.applications[0].checked_at);directory.applications[0].review={time:'2026-11-01T01:00:00Z',notes:review.notes,current:true};data={message:'Review recorded.'}}
  else throw Error('Unexpected request: '+url);
  return {ok:true,async json(){return data}};
 }
@@ -38,6 +39,12 @@ const wait=()=>new Promise(resolve=>setImmediate(resolve));
  await handlers.get('document:click')({target:{closest(query){return query.startsWith('[data-action]')?button:null}}});
  assert.match(el('#detail').innerHTML,/No rule flags were raised/);
  assert.match(el('#detail').innerHTML,/Policy sources/);
+ assert.match(el('#detail').innerHTML,/Mark checks reviewed/);
+ el('#case-review-notes').value='Screening reviewed';
+ const reviewButton={dataset:{action:'record-case-review'},disabled:false};
+ await handlers.get('document:click')({target:{closest(query){return query.startsWith('[data-action]')?reviewButton:null}}});
+ assert.match(el('#detail').innerHTML,/Screening reviewed/);
+ assert.doesNotMatch(el('#detail').innerHTML,/Mark checks reviewed/);
  el('#edit-application_date').value='2026-02-01';
  const edit={dataset:{editSave:'application_date'},disabled:false};
  await handlers.get('document:click')({target:{closest(query){return query.startsWith('[data-action]')?edit:null}}});

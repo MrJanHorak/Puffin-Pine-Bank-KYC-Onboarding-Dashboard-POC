@@ -19,6 +19,7 @@ function explainReason(code){
 function nextStep(item,result){
  if(!item)return 'Choose an application to get started.';
  if(item.category==='Needs recheck')return 'The case has changed since its last check. Run checks again.';
+ if(item.review?.current)return 'The latest checks have been reviewed. A separate decision is still required.';
  if(!result){if(item.category==='Not checked')return 'Run checks to assess the application and screen the recorded parties.';return 'Review the case details and run checks to refresh the results.'}
  if(result.status==='COMPLIANCE_REVIEW')return 'Review the reasons and coordinate the required compliance review.';
  if(result.status==='MISSING_DATA')return 'Review the missing or uncertain information before proceeding.';
@@ -91,6 +92,7 @@ function renderDetail(){
  <section><div class="section-title"><h3>Business &amp; ownership</h3><span class="tag">APPLICATION DETAILS</span></div><div class="facts"><div class="fact"><small>BUSINESS NAME</small><strong>${esc(displayName(d.company.name))}</strong></div><div class="fact"><small>REGISTRATION</small><strong>${esc(d.company.registration_number||'Not provided')}</strong></div><div class="fact"><small>JURISDICTION RISK</small><strong>${esc(label(d.company.risk_tier)||'Not available')}</strong></div></div><div class="subheading">Related parties</div>${parties||'<p>No related parties recorded.</p>'}</section>
  <section><div class="section-title"><h3>Document evidence</h3><span class="tag">${d.linked?'SOURCE DOCUMENTS':'DOCUMENT RECORDS'}</span></div>${docs||'<p>No document records available.</p>'}${d.linked?renderLinkedReview():'<p class="muted">File contents are not available for these document records.</p>'}</section>
  ${renderFields(d)}${renderAssessment(result)}
+ <section><div class="section-title"><h3>Analyst review</h3>${item?.review?.current?badge('Reviewed'):''}</div>${item?.review?`<p>${item.review.current?'Review recorded':'Previous review (not current)'} · ${esc(readableTime(item.review.time))}</p><p>${esc(item.review.notes)}</p>`:'<p>No analyst review recorded.</p>'}${result?.status==='NO_FLAGS'&&item?.category==='No rule flags'&&!item?.review?.current?`<label for="case-review-notes">Review notes</label><textarea id="case-review-notes" maxlength="500" rows="3" placeholder="Record what you reviewed and any remaining next steps"></textarea><div class="actions"><button class="action" type="button" data-action="record-case-review">Mark checks reviewed</button></div>`:''}<p class="muted">A review records your assessment of these checks. It does not approve the application or record a final decision.</p></section>
  <section><div class="section-title"><h3>Case activity</h3></div>${audit||'<p>No case edits recorded.</p>'}</section>`;
 }
 async function openCase(id){
@@ -118,6 +120,13 @@ async function sendReview(button){
  const response=await api('/api/lab/review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({application_id:id,review_id:reviewId,action,rationale})});
  const entry=state.assessment[id]?.review_cases.find(r=>r.id===reviewId);if(entry)entry.actions=response.actions;
  if(state.selected===id)renderDetail();await loadActivity();
+}
+async function recordCaseReview(button){
+ const id=state.selected,item=currentItem(),notes=$('#case-review-notes').value.trim();
+ if(!notes){$('#case-review-notes').focus();return}
+ button.disabled=true;
+ await api('/api/lab/case-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({application_id:id,checked_at:item.checked_at,notes})});
+ await loadDirectory();if(state.selected===id)renderDetail();await loadActivity();
 }
 async function saveEdit(button,reset){
  const id=state.selected,field=reset?button.dataset.editReset:button.dataset.editSave,value=reset?'':document.getElementById('edit-'+field).value;
@@ -156,6 +165,7 @@ document.addEventListener('click',async event=>{
   if(button.dataset.linkedField||button.dataset.supplement){button.disabled=true;await updateLinked(button);return}
   if(button.dataset.reviewId){button.disabled=true;await sendReview(button);return}
   if(button.dataset.action==='run-checks'){await runChecks(button);return}
+  if(button.dataset.action==='record-case-review'){await recordCaseReview(button);return}
   if(button.dataset.action==='generate-summary'){await generateSummary(button);return}
   if(button.dataset.action==='load-evidence'){button.disabled=true;await refreshCase(state.selected,true);return}
   if(button.dataset.action==='ask-policy'){await ask(button,'policy');return}

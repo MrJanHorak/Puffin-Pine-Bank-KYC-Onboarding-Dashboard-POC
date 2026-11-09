@@ -14,6 +14,9 @@ def init(db):
     db.execute('''CREATE TABLE IF NOT EXISTS lab_runs
       (application_id TEXT PRIMARY KEY, checked_at TEXT NOT NULL, status TEXT NOT NULL,
        reasons TEXT NOT NULL, source_revision TEXT NOT NULL, linked_revision TEXT NOT NULL)''')
+    db.execute('''CREATE TABLE IF NOT EXISTS case_reviews
+      (id INTEGER PRIMARY KEY AUTOINCREMENT, application_id TEXT NOT NULL, checked_at TEXT NOT NULL,
+       time TEXT NOT NULL, notes TEXT NOT NULL)''')
 
 def source_revision():
     """Detect changes to the local rule engine and included synthetic case sources."""
@@ -34,11 +37,12 @@ def linked_revision(state):
 
 def save_run(db, result, source_rev, case_revision=''):
     db.execute('''INSERT OR REPLACE INTO lab_runs(application_id,checked_at,status,reasons,source_revision,linked_revision)
-      VALUES (?,?,?,?,?,?)''', (result['application_id'], datetime.now(timezone.utc).isoformat(timespec='seconds'),
+      VALUES (?,?,?,?,?,?)''', (result['application_id'], datetime.now(timezone.utc).isoformat(timespec='microseconds'),
       result['status'],json.dumps(result['reasons']),source_rev,case_revision))
 
 def directory(db, data_layer, linked_id, linked_state):
     runs={row['application_id']:dict(row) for row in db.execute('SELECT * FROM lab_runs')}
+    reviews={row['application_id']:dict(row) for row in db.execute('SELECT * FROM case_reviews ORDER BY id')}
     rev=source_revision(); tables=data_layer.tables(); items=[]; edits=course_edits.revisions(db)
     for app_id, app in tables['applications'].items():
         company=data_layer.company_of(app_id)
@@ -51,6 +55,9 @@ def directory(db, data_layer, linked_id, linked_state):
             item.update(category='Needs recheck',checked_at=run['checked_at'],reasons=json.loads(run['reasons']),last_status=run['status'])
         else:
             item.update(category=STATUS_TO_CATEGORY.get(run['status'],'Needs recheck'),checked_at=run['checked_at'],reasons=json.loads(run['reasons']),last_status=run['status'])
+        review=reviews.get(item['id'])
+        item['review']=None if not review else {'time':review['time'],'notes':review['notes'],
+            'current':item['category']=='No rule flags' and review['checked_at']==item['checked_at']}
     items.sort(key=lambda x:x['id'])
     return {'applications':items,'counts':{'All applications':len(items), **{name:sum(i['category']==name for i in items) for name in CATEGORIES}},
             'note':'Statuses reflect checks run in this local demo. Unchecked cases have not been screened. All decisions remain with a person.'}
