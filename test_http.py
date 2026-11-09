@@ -8,7 +8,7 @@ import app, lab_bridge
 class HttpWorkflowTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory(); self.old_db=app.DB; self.old_store=lab_bridge.REVIEW_STORE
-        self.env=patch.dict('os.environ',{'KYC_POLICY_SEARCH':'off'}); self.env.start()
+        self.env=patch.dict('os.environ',{'KYC_POLICY_SEARCH':'off','GEMINI_API_KEY':''}); self.env.start()
         app.DB=Path(self.tmp.name)/'demo.sqlite3'; lab_bridge.REVIEW_STORE=Path(self.tmp.name)/'reviews.json'
         app.init_db(); self.server=app.ThreadingHTTPServer(('127.0.0.1',0),app.Handler)
         self.thread=threading.Thread(target=self.server.serve_forever,daemon=True); self.thread.start()
@@ -22,15 +22,33 @@ class HttpWorkflowTests(unittest.TestCase):
         request=Request(self.base+path,data=json.dumps(body).encode(),headers={'Content-Type':'application/json'},method='POST')
         with urlopen(request) as response: return json.load(response)
     def test_document_and_review_workflow(self):
+        with urlopen(self.base+'/') as response:
+            page=response.read().decode('utf-8-sig')
+        self.assertIn('id="directory-list"',page)
+        self.assertNotIn('Separate sample scenarios',page)
+        self.assertNotIn('Course KYC workbench',page)
+        # Existing standalone scenario records are retained for compatibility.
+        self.assertEqual(len(self.get('/api/cases')),3)
         with urlopen(self.base+'/markdown.js') as response:
             self.assertIn('text/javascript',response.headers['Content-Type'])
         ids=self.get('/api/lab/applications')['application_ids']
         self.assertEqual(len(ids),201)
         self.assertIn('SPECIMEN-APP-5200',ids)
         self.assertIn('SPECIMEN-APP-5201',ids)
+        before=self.get('/api/lab/directory')['counts']['Not checked']
+        regular_detail=self.get('/api/lab/case/SPECIMEN-APP-5154')
+        self.assertTrue(regular_detail['company']['name'])
+        self.assertEqual(self.get('/api/lab/directory')['counts']['Not checked'],before)
+        assistant=self.post('/api/lab/agent',{'application_id':'SPECIMEN-APP-5154'})
+        self.assertEqual(assistant['mode'],'unavailable')
+        self.assertEqual(assistant['assessment']['application_id'],'SPECIMEN-APP-5154')
         linked=self.post('/api/lab/run',{'application_id':'SPECIMEN-APP-5201'})
         self.assertEqual(linked['linked_document_case'],'CASE-A')
         self.assertEqual(linked['status'],'MISSING_DATA')
+        linked_detail=self.get('/api/lab/case/SPECIMEN-APP-5201')
+        self.assertEqual(linked_detail['company']['name'],'Halden Logistics Ltd')
+        self.assertEqual(len(linked_detail['parties']),2)
+        self.assertTrue(any((d.get('source') or '').startswith('A1_') for d in linked_detail['documents']))
         documents=self.get('/api/documents/CASE-B'); self.assertTrue(documents['review_items'])
         result=self.post('/api/lab/run',{'application_id':'SPECIMEN-APP-5155'})
         self.assertEqual(result['status'],'COMPLIANCE_REVIEW')

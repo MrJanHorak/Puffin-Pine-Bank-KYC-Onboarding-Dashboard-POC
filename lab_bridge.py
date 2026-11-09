@@ -84,7 +84,7 @@ def run_course_case(application_id, review_state=None, fields=None):
                 'Synthetic supplemental records reviewed.' if extracted['supplement_ready'] else 'Director list and PEP declarations have not been verified.',
                 'Low-confidence fields require analyst review before use.'] if linked else []),
             'ownership_chains': ownership_evidence(pack) if 'COMPLEX_OWNERSHIP' in reasons else [],
-            'note':'Synthetic course rules and watchlist. A person reviews and decides.'}
+            'note':'Synthetic records and watchlist. A person reviews and decides.'}
 
 def retrieve_policy(jurisdiction):
     mode = os.environ.get('KYC_POLICY_SEARCH', 'off').lower()

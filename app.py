@@ -142,7 +142,18 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith('/api/lab/case/'):
             application_id=path.rsplit('/',1)[-1]
             if application_id == linked_review.CASE_ID:
-                return self.respond(200, {'application_id':application_id,'linked':True,'document_case':'CASE-A'})
+                state=linked_state(); pack, extracted=lab_bridge.linked_case.build_pack(state)
+                paths={p.name.split('_')[0]:p.name for p in document_bridge.list_documents('CASE-A')}
+                paths['A5']=linked_review.SUPPLEMENT.name
+                sources={'SPECIMEN-DOC-8901':'A1','SPECIMEN-DOC-8902':'A2','SPECIMEN-DOC-8903':'A3','SPECIMEN-DOC-8904':'A4','SPECIMEN-DOC-8905':'A5'}
+                return self.respond(200, {'application_id':application_id,'linked':True,'document_case':'CASE-A',
+                    'company':{'name':pack['company'].get('full_name'),'registration_number':pack['company'].get('registration_number'),
+                               'jurisdiction':pack['company'].get('country_code'),'risk_tier':pack['company'].get('risk_tier')},
+                    'parties':[{'id':p['party_id'],'role':p['role'],'name':p.get('full_name'),'ownership_pct':p.get('ownership_pct'),'owned_via':p.get('owned_via_party_id')} for p in pack['parties']],
+                    'documents':[{'id':d['document_id'],'type':d['doc_type'],'party_id':d['party_id'],
+                                  'document_date':d.get('document_date'),'expiry_date':d.get('expiry_date'),
+                                  'source':paths.get(sources.get(d['document_id'],''))} for d in pack['documents']],
+                    'fields':[],'audit':state['audit'],'document_review_items':extracted['review_items']})
             try:
                 with connect() as db: return self.respond(200, course_edits.snapshot(db,lab_bridge.data_layer,application_id))
             except ValueError as exc: return self.respond(404, {'error':str(exc)})
@@ -167,14 +178,15 @@ class Handler(BaseHTTPRequestHandler):
             return self.respond(200, file.read_bytes(), kind + '; charset=utf-8')
         with connect() as db:
             if path == '/api/operations':
-                events = [dict(r) for r in db.execute('SELECT case_id,time,message FROM events ORDER BY id DESC LIMIT 100')]
-                cases = [detail(db,r['id']) for r in db.execute('SELECT id FROM cases')]
+                events = [{'case_id':r['application_id'],'time':r['checked_at'],'message':'Checks completed: '+r['status']} for r in db.execute('SELECT application_id,checked_at,status FROM lab_runs')]
+                events += [{'case_id':r['application_id'],'time':r['time'],'message':'Case field '+r['field']+' '+r['action']} for r in db.execute('SELECT application_id,time,field,action FROM course_edit_audit')]
+                events += [{'case_id':linked_review.CASE_ID,'time':r['time'],'message':'Document review: '+r['field_id']+' '+r['action']} for r in db.execute('SELECT time,field_id,action FROM linked_audit')]
                 reviews = lab_bridge.list_review_cases()
                 for row in reviews:
                     for item in row.get('actions',[]):
                         events.append({'case_id':row['application_id'], 'time':item['time'], 'message':'Review '+row['review_case_id']+' '+item['action']+' by '+item['actor']})
                 events.sort(key=lambda item:item['time'],reverse=True)
-                return self.respond(200, {'events':events[:100], 'sample_counts':{s:sum(c['status']==s for c in cases) for s in ('Screening pending','Needs information','Compliance review','Ready for analyst')}, 'review_case_count':len(reviews), 'scope':'Three sample queue applications and local course review records only.'})
+                return self.respond(200, {'events':events[:100], 'review_case_count':len(reviews), 'scope':'Local application checks, edits and review actions.'})
             if path == '/api/cases': return self.respond(200, [detail(db, r['id']) for r in db.execute('SELECT id FROM cases ORDER BY id')])
             if path.startswith('/api/cases/'):
                 case = detail(db, path.rsplit('/',1)[-1]); return self.respond(200 if case else 404, case or {'error':'Case not found'})
@@ -239,7 +251,11 @@ class Handler(BaseHTTPRequestHandler):
                 assessment = lab_bridge.run_course_case(application_id, state, overrides)
                 if application_directory.source_revision() != source_rev: raise ValueError('Case source files changed during the check. Restart the app and rerun.')
                 with connect() as db: application_directory.save_run(db,assessment,source_rev,case_revision)
-                return self.respond(200, gemini_agent.run_agent(assessment) if parts[-1] == 'agent' else assessment)
+                if parts[-1] == 'agent':
+                    answer=gemini_agent.run_agent(assessment)
+                    answer['assessment']=assessment
+                    return self.respond(200, answer)
+                return self.respond(200, assessment)
             except (ValueError, json.JSONDecodeError) as exc: return self.respond(400, {'error':str(exc)})
         if len(parts) != 4 or parts[:2] != ['api','cases']: return self.respond(404, {'error':'Not found'})
         try:

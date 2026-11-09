@@ -16,7 +16,7 @@ def init(db):
 
 def base_pack(data_layer, application_id):
     pack=data_layer.get_application_pack(application_id)
-    if pack is None: raise ValueError('Application not found in the course dataset.')
+    if pack is None: raise ValueError('Application not found.')
     return pack
 
 def base_hash(pack):
@@ -51,7 +51,7 @@ def snapshot(db,data_layer,application_id):
             'audit':[dict(row) for row in db.execute('SELECT time,field,old_value,new_value,action FROM course_edit_audit WHERE application_id=? ORDER BY id DESC',(application_id,))]}
 
 def change(db,data_layer,application_id,field,value,reset=False):
-    if field not in FIELD_LABELS: raise ValueError('This field is not supported by the course data layer.')
+    if field not in FIELD_LABELS: raise ValueError('This field is not available for editing.')
     if not isinstance(reset,bool): raise ValueError('Invalid edit action.')
     if not reset:
         if not isinstance(value,str) or len(value)>160: raise ValueError('Enter a value of at most 160 characters.')
