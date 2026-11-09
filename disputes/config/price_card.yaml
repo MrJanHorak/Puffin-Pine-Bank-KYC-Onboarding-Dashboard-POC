@@ -1,0 +1,5 @@
+# SPECIMEN placeholder prices, as in the course price card. Not real prices.
+as_of: "2026-11-01"
+source: "course placeholder"
+input_usd_per_million: 2.00
+output_usd_per_million: 10.00

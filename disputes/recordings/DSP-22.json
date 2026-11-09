@@ -1,0 +1,7 @@
+{
+  "summary": {
+    "text": "The customer disputes 1 transaction, reporting an unauthorised charge. Routed to the fraud queue because the customer says they did not make the charge; a fraud review case is open. The disputed total is over 1,000 USD, so a senior analyst owns the decision. No decision has been made; an analyst reviews and decides.",
+    "tokens_in": 132,
+    "tokens_out": 79
+  }
+}

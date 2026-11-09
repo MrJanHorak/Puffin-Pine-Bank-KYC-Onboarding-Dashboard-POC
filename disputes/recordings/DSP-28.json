@@ -1,0 +1,12 @@
+{
+  "summary": {
+    "text": "The customer disputes 1 transaction, reporting an unspecified problem. They chose Other; the suggested category is UNAUTHORISED, based on: \"Someone else must have used my card details.\" Please confirm it. Routed to the fraud queue because the statement suggests the charge was not the customer's; a fraud review case is open. No decision has been made; an analyst reviews and decides.",
+    "tokens_in": 136,
+    "tokens_out": 96
+  },
+  "category": {
+    "text": "{\"category\": \"UNAUTHORISED\", \"quote\": \"Someone else must have used my card details.\"}",
+    "tokens_in": 102,
+    "tokens_out": 21
+  }
+}

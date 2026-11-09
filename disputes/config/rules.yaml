@@ -1,0 +1,19 @@
+# SPECIMEN: synthetic training rules for Puffin & Pine Bank card disputes.
+# Every number here is invented. See the sample PRD, sections 5 and 12.
+specimen: true
+time_limit_days: 120          # R2: 120 passes, 121 flags
+amount_tolerance: 0.01        # R1: a difference above this is AMOUNT_MISMATCH
+senior_review_over: 1000.00   # R5: total disputed over this -> SENIOR (per dispute)
+cluster_window_hours: 24      # R4: CLUSTER_24H window
+cluster_min_merchants: 3      # R4: distinct merchants inside one window
+search_timeout_seconds: 5     # R8: slower than this counts as unavailable
+
+# R3: fields every dispute needs. Customer-entered fields can go in the R11
+# request; system fields can't, because the customer can't fix them.
+required_fields:
+  system: [dispute_id, received_date, customer_id, card_id]
+  customer: [reason_category, txn_ids, claimed_amounts, customer_statement]
+
+categories: [UNAUTHORISED, NOT_RECEIVED, NOT_AS_DESCRIBED, DUPLICATE_CHARGE,
+             CANCELLED_RECURRING, OTHER]
+policy_categories: [NOT_RECEIVED, NOT_AS_DESCRIBED]   # R8 runs for these

@@ -1,0 +1,7 @@
+{
+  "summary": {
+    "text": "The customer disputes 1 transaction, reporting a duplicate charge. Waiting on: MISSING_FIELD:customer_statement. A request to the customer is drafted for an analyst to review and send. No decision has been made; an analyst reviews and decides.",
+    "tokens_in": 120,
+    "tokens_out": 61
+  }
+}

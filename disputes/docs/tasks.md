@@ -1,0 +1,16 @@
+# Tasks
+
+Ten tasks, one per course topic, done in order. Each opens with a short exercise on paper, then asks for one small change. **Minimum** is what done means. Make every code change with a 4-line request to Claude Code (Change, Files, Constraints, Done when), review the diff, and log it in `AI-LOG.md`.
+
+| Task | Topic | Paper first | Minimum | Stretch |
+| --- | --- | --- | --- | --- |
+| 1 | Role clarity and scoping | Read [the sponsor's request](sponsor_request.md); sort who owns what: you, the CTD, the analyst, or nobody | Write 3 things in scope and 3 out, each with a reason. Test 2 claims in the request against `data/` and log any gap with an owner | Turn one gap into an open question with an owner |
+| 2 | AI-native engineering | Write a 4-line request for a small change | Ask Claude Code to walk `DSP-31` through the build and explain each step. Make one scoped change from your request; review the diff | Make the same change in a separate worktree and compare |
+| 3 | PRD and cost-to-serve | Score the PRD on the 5-test scorecard; find its weakest line | Label the 5 cards in [paper/dispute_cards.md](paper/dispute_cards.md) with queue, reviewer and readiness. Recompute cost per dispute if `OTHER` disputes rise to 50% | Rewrite the weakest line so it passes |
+| 4 | Context engineering | List what the summary call needs, and what it must never see | Compare `prompt_tokens_est` for `DSP-31` with and without the policy section. Remove one field the summary doesn't need; `python -m evals.run` still passes the same cases | Name one thing to retrieve rather than always send |
+| 5 | Tools and MCP | Sketch `search_policy`'s inputs, outputs and errors | Fill the `TODO(Task 5)` in `triage/tools.py`: a failure or a slow search returns `{"outcome": "unavailable"}`. Pass `tests/test_tools.py` and `DSP-34` | Explain how `open_review_case` stays safe to call twice |
+| 6 | Autonomy Ladder and POC | Triage the 3 Task 6 cards by hand; place each component on the ladder with an oversight mode | Fill the two `TODO(Task 6)` functions in `triage/rules.py`. Pass `tests/test_rules.py`; run one dispute and read its cost with `scripts/cost_report.py` | Compare your placements with [paper/all_agent_trace.md](paper/all_agent_trace.md) |
+| 7 | Building the eval suite | Predict what `DSP-22` and `DSP-37` will do | Write the `expect` for `DSP-21` and `DSP-34` in `evals/cases.jsonl`. Run all 40; log 2 gaps in `gap-log.md` | Fix the gap `DSP-22` reveals |
+| 8 | Risk standards | Give each tool in [paper/tool_list.md](paper/tool_list.md) a permission class | Write a test first: `send_customer_message` without an analyst's approval is refused and logged. See it fail, add the gate, see it pass | Add a test that no tool can grant, deny or file |
+| 9 | Deployment decision | Read [the facts card](deployment_facts.md); mark the facts that decide | Fill [the decision record template](decision_record_template.md), each line citing the facts card | Compare measured cost per dispute with the PRD's estimate |
+| 10 | Handoff brief | Swap drafts; each reader marks the line they'd distrust | Fill [the handoff brief template](handoff_brief_template.md): what it does, limits, a 3-command runbook, known gaps | A 3-minute defense, then 2 minutes of questions from a peer playing sponsor or CTD |

@@ -1,0 +1,12 @@
+{
+  "summary": {
+    "text": "The customer disputes 1 transaction, reporting an unspecified problem. They chose Other; the suggested category is NOT_RECEIVED, based on: \"Nothing has been delivered yet.\" Please confirm it. No decision has been made; an analyst reviews and decides.",
+    "tokens_in": 128,
+    "tokens_out": 62
+  },
+  "category": {
+    "text": "{\"category\": \"NOT_RECEIVED\", \"quote\": \"Nothing has been delivered yet.\"}",
+    "tokens_in": 100,
+    "tokens_out": 18
+  }
+}

@@ -1,0 +1,7 @@
+# SPECIMEN: evidence each reason category needs before an analyst can work it (R3).
+UNAUTHORISED: []
+NOT_RECEIVED: [expected_delivery_date, merchant_contact_attempt]
+NOT_AS_DESCRIBED: [item_description, merchant_contact_attempt]
+DUPLICATE_CHARGE: []
+CANCELLED_RECURRING: [cancellation_date]
+OTHER: []
